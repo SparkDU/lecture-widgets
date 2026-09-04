@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 점을 찍으면 Γ, SWR, Zᵢₙ 이 나온다 · 초고주파공학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 점을 찍으면 Γ, SWR, Zᵢₙ 이 나온다</h1>
+<div class="과목">초고주파공학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="smithsim" width="1920" height="900"
+        style="min-width:680px;width:100%;max-width:1160px;cursor:crosshair;touch-action:none"></canvas></div>
+<div style="width:100%;max-width:1160px;margin:0 auto;font-size:0.72em;display:flex;align-items:center;gap:12px">
+<span style="white-space:nowrap">부하로부터의 거리 <i>ℓ</i> (파장 단위)</span>
+<input id="smithlen" type="range" min="0" max="0.5" step="0.005" value="0.125" style="flex:1;min-width:520px">
+<span id="smithlenv" style="width:4em;text-align:left">0.125</span>
+</div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("smithsim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var slider = document.getElementById("smithlen"), lenv = document.getElementById("smithlenv");
+
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#9b9b9b", INK = "#333333", LIGHT = "#d0d0d0";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif';
+  var W = 960, H = 450;
+  var CX = 228, CY = 225, R = 196;
+
+  var rL = 0.60, xL = -0.80, ell = 0.125;
+
+  function gam(r, x) {
+    var a = r - 1, b = x, c = r + 1, d = x, den = c * c + d * d;
+    return [(a * c + b * d) / den, (b * c - a * d) / den];
+  }
+  function zof(gr, gi) {
+    var a = 1 + gr, b = gi, c = 1 - gr, d = -gi, den = c * c + d * d;
+    return [(a * c + b * d) / den, (b * c - a * d) / den];
+  }
+  function X(gr) { return CX + gr * R; }
+  function Y(gi) { return CY - gi * R; }
+
+  function circlePath(r, n) {
+    ctx.beginPath(); ctx.arc(X(r / (1 + r)), CY, R / (1 + r), 0, 6.2832); ctx.stroke();
+  }
+  function xArc(x) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, 6.2832); ctx.clip();
+    ctx.beginPath(); ctx.arc(X(1), Y(1 / x), R / Math.abs(x), 0, 6.2832); ctx.stroke();
+    ctx.restore();
+  }
+
+  function fmt(v, n) { if (Math.abs(v) < 0.5 * Math.pow(10, -n)) v = 0; var s = v.toFixed(n); return s.replace("-", "−"); }
+  function signed(v, n) { if (Math.abs(v) < 0.5 * Math.pow(10, -n)) v = 0; return (v < 0 ? " − " : " + ") + "j" + Math.abs(v).toFixed(n); }
+
+  function drawRuns(parts, x, y, size, color, halo) {
+    var i, q;
+    ctx.fillStyle = color; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 3.5; ctx.lineJoin = "round"; ctx.miterLimit = 2;
+    function put(s, px, py) { if (halo) ctx.strokeText(s, px, py); ctx.fillText(s, px, py); }
+    for (i = 0; i < parts.length; i++) {
+      q = parts[i];
+      if (q[0] === "SUB") {
+        ctx.font = "italic " + Math.round(size * 0.66) + "px " + SERIF;
+        put(q[1], x, y + size * 0.25); x += ctx.measureText(q[1]).width + 1;
+      } else if (q[0] === "SUBR") {
+        ctx.font = Math.round(size * 0.66) + "px " + SERIF;
+        put(q[1], x, y + size * 0.25); x += ctx.measureText(q[1]).width + 1;
+      } else if (q[0] === "SUP") {
+        ctx.font = "italic " + Math.round(size * 0.66) + "px " + SERIF;
+        put(q[1], x, y - size * 0.45); x += ctx.measureText(q[1]).width + 1;
+      } else {
+        ctx.font = (q[1] === "i" ? "italic " : "") + size + "px " + SERIF;
+        put(q[0], x, y); x += ctx.measureText(q[0]).width;
+      }
+    }
+    return x;
+  }
+
+  function measureRuns(parts, size) {
+    var i, q, w = 0;
+    for (i = 0; i < parts.length; i++) {
+      q = parts[i];
+      if (q[0] === "SUB" || q[0] === "SUP") {
+        ctx.font = "italic " + Math.round(size * 0.66) + "px " + SERIF;
+        w += ctx.measureText(q[1]).width + 1;
+      } else if (q[0] === "SUBR") {
+        ctx.font = Math.round(size * 0.66) + "px " + SERIF;
+        w += ctx.measureText(q[1]).width + 1;
+      } else {
+        ctx.font = (q[1] === "i" ? "italic " : "") + size + "px " + SERIF;
+        w += ctx.measureText(q[0]).width;
+      }
+    }
+    return w;
+  }
+
+  function pointLabel(parts, gp, color, dy) {
+    var w = measureRuns(parts, 19);
+    var px = X(gp[0]) + 12;
+    if (px + w > CX + R + 24) px = X(gp[0]) - 12 - w;
+    drawRuns(parts, px, Y(gp[1]) - 20 + (dy || 0), 19, color, true);
+  }
+
+  function drawChart() {
+    var i, rv = [0.2, 0.5, 1, 2, 5], xv = [0.2, 0.5, 1, 2, 5];
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 1;
+    for (i = 0; i < rv.length; i++) circlePath(rv[i]);
+    for (i = 0; i < xv.length; i++) { xArc(xv[i]); xArc(-xv[i]); }
+    ctx.beginPath(); ctx.moveTo(X(-1), CY); ctx.lineTo(X(1), CY); ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, 6.2832); ctx.stroke();
+
+    ctx.fillStyle = "#666"; ctx.font = "13px " + SERIF; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    for (i = 0; i < rv.length; i++) { var g = gam(rv[i], 0); ctx.fillText(String(rv[i]), X(g[0]), CY - 2); }
+    ctx.textBaseline = "middle";
+    for (i = 0; i < xv.length; i++) {
+      var gp = gam(0, xv[i]), gm = gam(0, -xv[i]);
+      ctx.fillText("+j" + xv[i], X(gp[0] * 1.09), Y(gp[1] * 1.09));
+      ctx.fillText("−j" + xv[i], X(gm[0] * 1.09), Y(gm[1] * 1.09));
+    }
+    ctx.fillText("개방", X(1) + 22, CY + 14); ctx.fillText("단락", X(-1) - 22, CY + 14);
+  }
+
+  function drawState() {
+    var g = gam(rL, xL), mag = Math.sqrt(g[0] * g[0] + g[1] * g[1]);
+    var th = -2 * 2 * Math.PI * ell;
+    var gi = [g[0] * Math.cos(th) - g[1] * Math.sin(th), g[0] * Math.sin(th) + g[1] * Math.cos(th)];
+
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.arc(CX, CY, mag * R, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
+
+    var a0 = -Math.atan2(g[1], g[0]), a1 = a0 - th;
+    if (ell > 0.0001) {
+      ctx.strokeStyle = ORANGE; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(CX, CY, mag * R, a0, a1, false); ctx.stroke();
+
+      var hx = X(gi[0]), hy = Y(gi[1]), tang = a1 + Math.PI / 2, hl = 11;
+      ctx.fillStyle = ORANGE; ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx - hl * Math.cos(tang - 0.45), hy - hl * Math.sin(tang - 0.45));
+      ctx.lineTo(hx - hl * Math.cos(tang + 0.45), hy - hl * Math.sin(tang + 0.45));
+      ctx.closePath(); ctx.fill();
+    }
+
+    ctx.fillStyle = ORANGE; ctx.strokeStyle = "#000"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(X(g[0]), Y(g[1]), 6.5, 0, 6.2832); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = BLUE;
+    ctx.fillRect(X(gi[0]) - 6, Y(gi[1]) - 6, 12, 12); ctx.strokeRect(X(gi[0]) - 6, Y(gi[1]) - 6, 12, 12);
+
+    var x0 = 466, S = 25, y = 66, deg = Math.atan2(g[1], g[0]) * 180 / Math.PI;
+    var degIn = Math.atan2(gi[1], gi[0]) * 180 / Math.PI;
+    var swr = mag >= 0.9999 ? "∞" : ((1 + mag) / (1 - mag)).toFixed(2);
+    var zin = zof(gi[0], gi[1]);
+
+    var overlap = Math.abs(X(gi[0]) - X(g[0])) < 46 && Math.abs(Y(gi[1]) - Y(g[1])) < 30;
+    pointLabel([["z", "i"], ["SUB", "L"], [" = " + fmt(rL, 2) + signed(xL, 2), "r"]], g, ORANGE, 0);
+    pointLabel([["z", "i"], ["SUB", "in"], [" = " + fmt(zin[0], 2) + signed(zin[1], 2), "r"]], gi, BLUE,
+               overlap ? 30 : 0);
+
+    ctx.font = "16px " + SERIF; ctx.fillStyle = "#666"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("차트를 눌러 부하를 고르고, 아래 슬라이더로 선로를 따라가 보세요", x0, y - 34);
+    drawRuns([["z", "i"], ["SUB", "L"], [" = " + fmt(rL, 2) + signed(xL, 2), "r"]], x0, y, S, ORANGE);
+    y += 40;
+    drawRuns([["Γ", "i"], ["SUB", "L"], [" = (", "r"], ["z", "i"], ["SUB", "L"], [" − 1) / (", "r"], ["z", "i"], ["SUB", "L"], [" + 1)", "r"]], x0, y, S, INK);
+    y += 32;
+    drawRuns([["   = " + fmt(g[0], 2) + signed(g[1], 2) + "  =  " + mag.toFixed(2) + " ∠ " + fmt(deg, 0) + "°", "r"]], x0, y, S, ORANGE);
+    y += 38;
+    drawRuns([["SWR = (1 + |", "r"], ["Γ", "i"], ["|) / (1 − |", "r"], ["Γ", "i"], ["|) = " + swr, "r"]], x0, y, S, INK);
+    y += 46;
+    ctx.strokeStyle = LIGHT; ctx.beginPath(); ctx.moveTo(x0, y - 28); ctx.lineTo(W - 20, y - 28); ctx.stroke();
+    drawRuns([["ℓ", "i"], [" = " + ell.toFixed(3) + " ", "r"], ["λ", "i"], ["      2", "r"], ["β", "i"], ["ℓ", "i"], [" = " + fmt(4 * 180 * ell, 0) + "°", "r"]], x0, y, S, INK);
+    y += 38;
+    drawRuns([["Γ", "i"], ["SUB", "in"], [" = ", "r"], ["Γ", "i"], ["SUB", "L"], [" e", "r"], ["SUP", "−j2βℓ"], ["  = " + mag.toFixed(2) + " ∠ " + fmt(degIn, 0) + "°", "r"]], x0, y, S, BLUE);
+    y += 38;
+    drawRuns([["z", "i"], ["SUB", "in"], [" = (1 + ", "r"], ["Γ", "i"], ["SUB", "in"], [") / (1 − ", "r"], ["Γ", "i"], ["SUB", "in"], [") = " + fmt(zin[0], 2) + signed(zin[1], 2), "r"]], x0, y, S, BLUE);
+    y += 38;
+    drawRuns([["Z", "i"], ["SUB", "in"], [" = ", "r"], ["Z", "i"], ["SUBR", "0"], [" · ", "r"], ["z", "i"], ["SUB", "in"], [" = " + fmt(50 * zin[0], 1) + signed(50 * zin[1], 1) + " Ω    (", "r"], ["Z", "i"], ["SUBR", "0"], [" = 50 Ω)", "r"]], x0, y, S, BLUE);
+  }
+
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineJoin = "round";
+    drawChart(); drawState();
+  }
+
+  function pick(ev) {
+    var rc = cv.getBoundingClientRect();
+    var mx = (ev.clientX - rc.left) / rc.width * W, my = (ev.clientY - rc.top) / rc.height * H;
+    var gr = (mx - CX) / R, gi = (CY - my) / R, m = Math.sqrt(gr * gr + gi * gi);
+    if (m > 0.985) { gr *= 0.985 / m; gi *= 0.985 / m; }
+    var z = zof(gr, gi);
+    rL = Math.max(0.01, Math.round(z[0] * 100) / 100);
+    xL = Math.round(z[1] * 100) / 100;
+    draw();
+  }
+  var down = false;
+  cv.addEventListener("pointerdown", function (e) { down = true; pick(e); e.preventDefault(); });
+  cv.addEventListener("pointermove", function (e) { if (down) pick(e); });
+  window.addEventListener("pointerup", function () { down = false; });
+  slider.addEventListener("input", function () {
+    ell = Math.round(parseFloat(slider.value) * 200) / 200;
+    lenv.textContent = ell.toFixed(3);
+    draw();
+  });
+
+  slider.addEventListener("keydown", function (e) { e.stopPropagation(); });
+
+  draw();
+  window.addEventListener("load", draw);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과 · 무단 전재·재배포 금지</footer>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>움직여 보기: 가는 파, 오는 파, 그 합 · 초고주파공학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>움직여 보기: 가는 파, 오는 파, 그 합</h1>
+<div class="과목">초고주파공학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="wavesim" width="1920" height="970"
+        style="min-width:680px;width:100%;max-width:650px;cursor:pointer;touch-action:none"></canvas></div>
+<div style="max-width:860px;margin:0 auto;font-size:0.72em;display:flex;align-items:center;gap:12px">
+<span style="white-space:nowrap">반사 크기 |<i>&Gamma;</i><sub>L</sub>|</span>
+<input id="wavegam" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1">
+<span id="wavegamv" style="width:3em;text-align:left">0.50</span>
+<span style="color:#666">· 화면을 누르면 멈춤/재생</span>
+</div>
+<div style="max-width:820px;margin:2px auto 0;font-size:0.62em;color:#666;text-align:left">
+서퍼 = 파의 꼭대기를 표시한 것. 파를 타는 물리가 아니라 「꼭대기가 어디로 가나」의 표지입니다.<br>
+|<i>&Gamma;</i><sub>L</sub>| = 1 이면 합의 서퍼가 제자리에서 오르내립니다(정재파).<br>
+|<i>&Gamma;</i><sub>L</sub>| = 0 이면 반사파가 없어 입사파만 있습니다.
+</div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("wavesim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var slider = document.getElementById("wavegam"), gv = document.getElementById("wavegamv");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", INK = "#222222", GREY = "#9b9b9b", LIGHT = "#d9d9d9";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  var W = 960, H = 485;
+  var X0 = 110, X1 = 880;
+  var LINE = 34;
+  var ROWS = [125, 250, 380];
+  var AMP = 38;
+  var SPEED = 0.02;
+  var gam = 0.5, phase = 0, playing = true, sumPrev = -1;
+
+  function X(zl) { return X0 + (zl + 1) * (X1 - X0); }
+  function label(txt, x, y, color, font) {
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x, y);
+  }
+  function trace(fn, y0, color, width, dash) {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    for (var i = 0; i <= 300; i++) {
+      var zl = -1 + i / 300, x = X(zl), y = y0 - AMP * fn(zl);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  function surfer(x, y, color, dir, alpha) {
+    var d = dir || 1;
+    ctx.save(); ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x - d * 13, y + 2); ctx.quadraticCurveTo(x, y + 7, x + d * 15, y + 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - d * 2, y + 1); ctx.lineTo(x + d * 2, y - 13); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - d * 2, y + 1); ctx.lineTo(x - d * 8, y + 2); ctx.moveTo(x - d * 2, y + 1); ctx.lineTo(x + d * 6, y + 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + d * 1, y - 9); ctx.lineTo(x - d * 8, y - 4); ctx.moveTo(x + d * 1, y - 9); ctx.lineTo(x + d * 10, y - 12); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + d * 3, y - 17, 3.6, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var k = 2 * Math.PI;
+
+    ctx.strokeStyle = "#444"; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(X0, LINE - 11); ctx.lineTo(X1, LINE - 11); ctx.moveTo(X0, LINE + 11); ctx.lineTo(X1, LINE + 11); ctx.stroke();
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(X1, LINE - 11, 2.6, 0, 6.2832); ctx.stroke(); ctx.beginPath(); ctx.arc(X1, LINE + 11, 2.6, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X1 + 2.6, LINE - 11); ctx.lineTo(X1 + 22, LINE - 11); ctx.lineTo(X1 + 22, LINE - 6);
+    ctx.moveTo(X1 + 2.6, LINE + 11); ctx.lineTo(X1 + 22, LINE + 11); ctx.lineTo(X1 + 22, LINE + 6); ctx.stroke();
+    ctx.strokeRect(X1 + 16, LINE - 6, 12, 12);
+    label("Z", X1 + 34, LINE - 2, "#444", "italic 16px " + SERIF); label("L", X1 + 44, LINE + 4, "#444", "italic 11px " + SERIF);
+    label("전송선로 (이 위를 파가 오간다)", X0 + 8, LINE - 24, "#666", "14px " + SANS);
+    label("Z", X0 + 340, LINE, "#444", "italic 16px " + SERIF); label("0", X0 + 350, LINE + 5, "#444", "11px " + SERIF);
+    label(", β", X0 + 356, LINE, "#444", "italic 16px " + SERIF);
+    var rows = [
+      { y: ROWS[0], color: BLUE,   name: "입사파", sym: "V⁺",  fn: function (zl) { return Math.cos(phase - k * zl); } },
+      { y: ROWS[1], color: ORANGE, name: "반사파", sym: "V⁻",  fn: function (zl) { return gam * Math.cos(phase + k * zl); } },
+      { y: ROWS[2], color: INK,    name: "합",     sym: "V(z)", fn: function (zl) { return Math.cos(phase - k * zl) + gam * Math.cos(phase + k * zl); } }
+    ];
+    for (var r = 0; r < rows.length; r++) {
+      var R = rows[r];
+
+      ctx.strokeStyle = LIGHT; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X0, R.y); ctx.lineTo(X1, R.y); ctx.stroke();
+      ctx.strokeStyle = GREY; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X1, R.y - AMP - 8); ctx.lineTo(X1, R.y + AMP + 8); ctx.stroke();
+
+      if (r === 2) {
+        var env = function (zl) { var c = Math.cos(2 * k * zl), s = Math.sin(2 * k * zl); return Math.sqrt((1 + gam * c) * (1 + gam * c) + (gam * s) * (gam * s)); };
+        trace(env, R.y, GREY, 1.2, [5, 4]);
+        trace(function (zl) { return -env(zl); }, R.y, GREY, 1.2, [5, 4]);
+      }
+      trace(R.fn, R.y, R.color, 2.6);
+      label(R.name, 14, R.y - 12, R.color, "bold 17px " + SANS);
+      label(R.sym, 14, R.y + 12, R.color, "italic 19px " + SERIF);
+    }
+
+    var frac = ((phase / (2 * Math.PI)) % 1 + 1) % 1;
+    surfer(X(frac - 1), ROWS[0] - AMP - 4, BLUE, 1);
+
+    if (gam > 0.001) surfer(X(-frac), ROWS[1] - gam * AMP - 4, ORANGE, -1);
+
+    var N = 600, vals = new Array(N + 1), i, zz;
+    for (i = 0; i <= N; i++) vals[i] = rows[2].fn(-1 + i / N);
+
+    var bz = null, best = -1e9, bd = 1e9;
+    for (i = 1; i < N; i++) {
+      if (vals[i] >= vals[i - 1] && vals[i] > vals[i + 1] && vals[i] > 0.05) {
+        zz = -1 + i / N;
+        var dd = Math.abs(zz - sumPrev); dd = Math.min(dd, 1 - dd);
+        if (dd < bd) { bd = dd; bz = zz; best = vals[i]; }
+      }
+    }
+
+    if (bz === null || bd > 0.3) { bz = sumPrev; best = rows[2].fn(bz); }
+    sumPrev = bz;
+
+    var a = Math.max(0.15, Math.min(1, Math.abs(best) / 0.6));
+    surfer(X(bz), ROWS[2] - AMP * best - 4, INK, 1, a);
+
+    ctx.strokeStyle = BLUE; ctx.fillStyle = BLUE; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X0 + 20, ROWS[0] - AMP - 14); ctx.lineTo(X0 + 90, ROWS[0] - AMP - 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0 + 98, ROWS[0] - AMP - 14); ctx.lineTo(X0 + 86, ROWS[0] - AMP - 19); ctx.lineTo(X0 + 86, ROWS[0] - AMP - 9); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = ORANGE; ctx.fillStyle = ORANGE;
+    ctx.beginPath(); ctx.moveTo(X1 - 20, ROWS[1] - AMP - 14); ctx.lineTo(X1 - 90, ROWS[1] - AMP - 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X1 - 98, ROWS[1] - AMP - 14); ctx.lineTo(X1 - 86, ROWS[1] - AMP - 19); ctx.lineTo(X1 - 86, ROWS[1] - AMP - 9); ctx.closePath(); ctx.fill();
+
+    label("부하", X1 + 8, ROWS[2], "#555", "15px " + SANS);
+    label("z = −λ", X0 - 4, H - 14, "#555", "15px " + SERIF);
+    label("z = 0", X1 - 24, H - 14, "#555", "15px " + SERIF);
+    label("회색 파선 = 합의 최대·최소 (정재파 포락선)", X0 + 250, H - 14, "#555", "15px " + SANS);
+  }
+  function step() { if (playing) { phase += SPEED; draw(); } requestAnimationFrame(step); }
+  cv.addEventListener("pointerdown", function (e) { playing = !playing; e.preventDefault(); });
+  slider.addEventListener("input", function () { gam = Math.round(parseFloat(slider.value) * 20) / 20; gv.textContent = gam.toFixed(2); draw(); });
+  slider.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  draw();
+  window.addEventListener("load", draw);
+  requestAnimationFrame(step);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과 · 무단 전재·재배포 금지</footer>
+</body>
+</html>
