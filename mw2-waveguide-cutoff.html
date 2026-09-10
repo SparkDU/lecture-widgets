@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>움직여 보기: 주파수를 바꾸며 차단을 넘어 보기 · 초고주파공학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>움직여 보기: 주파수를 바꾸며 차단을 넘어 보기</h1>
+<div class="과목">초고주파공학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="cutoffsim" width="1920" height="860"
+        style="min-width:680px;width:100%;max-width:820px;cursor:pointer;touch-action:none"></canvas></div>
+<div style="max-width:820px;margin:0 auto;font-size:0.72em;display:flex;align-items:center;gap:12px">
+<span style="white-space:nowrap">주파수 <i>f</i> / <i>f</i><sub>c</sub></span>
+<input id="cutoffr" type="range" min="0.3" max="3" step="0.05" value="1.5" style="flex:1">
+<span id="cutoffrv" style="width:3em;text-align:left">1.50</span>
+<span style="color:#666">· 화면을 누르면 멈춤/재생</span>
+</div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("cutoffsim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var slider = document.getElementById("cutoffr"), rv = document.getElementById("cutoffrv");
+  var ORANGE = "#E69F00", BLUE = "#0072B2", INK = "#222222", GREY = "#9b9b9b", COND = "#555555";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  var W = 960, H = 430;
+  var X0 = 70, X1 = 700, YT = 60, YB = 300;
+  var ZL = 3.0;
+  var NY = 7, NZ = 24;
+  var r = 1.5, phase = 0, playing = true;
+  function label(txt, x, y, color, font, align) {
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x, y);
+  }
+  function arrow(x, y, dx, dy, color) {
+    var L = Math.hypot(dx, dy); if (L < 0.6) return;
+    var ux = dx / L, uy = dy / L, hl = Math.min(6, L * 0.5);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x - dx / 2, y - dy / 2); ctx.lineTo(x + dx / 2 - ux * hl * 0.6, y + dy / 2 - uy * hl * 0.6); ctx.stroke();
+    var tx = x + dx / 2, ty = y + dy / 2;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - ux * hl - uy * hl * 0.5, ty - uy * hl + ux * hl * 0.5);
+    ctx.lineTo(tx - ux * hl + uy * hl * 0.5, ty - uy * hl - ux * hl * 0.5); ctx.closePath(); ctx.fill();
+  }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var atc = Math.abs(r - 1) < 1e-9, above1 = r > 1 + 1e-9, above = above1 || atc;
+    var bd = above1 ? Math.PI * Math.sqrt(r * r - 1) : 0;
+    var ad = above ? 0 : Math.PI * Math.sqrt(1 - r * r);
+
+    ctx.fillStyle = COND; ctx.fillRect(X0, YT - 14, X1 - X0, 14); ctx.fillRect(X0, YB, X1 - X0, 14);
+    label("y = d", X0 - 6, YT - 7, "#555", "15px " + SERIF, "right");
+    label("y = 0", X0 - 6, YB + 7, "#555", "15px " + SERIF, "right");
+    label("z", X1 + 8, YB + 7, "#555", "italic 16px " + SERIF);
+    label("0", X0, YB + 26, "#555", "14px " + SERIF, "center"); label("3d", X1, YB + 26, "#555", "italic 14px " + SERIF, "center");
+
+    var gy = (YB - YT) / NY, gz = (X1 - X0) / NZ;
+    var amp = Math.max(1, (above1 ? bd : ad) / Math.PI);
+    var S = Math.min(gy, gz) * 0.92 / amp;
+    for (var i = 0; i < NY; i++) {
+      var yp = (i + 0.5) / NY, y = YB - yp * (YB - YT);
+      for (var j = 0; j < NZ; j++) {
+        var zp = (j + 0.5) / NZ * ZL, x = X0 + (j + 0.5) * gz;
+        var Ez, Ey;
+        if (above1) { Ez = Math.sin(Math.PI * yp) * Math.cos(phase - bd * zp); Ey = (bd / Math.PI) * Math.cos(Math.PI * yp) * Math.sin(phase - bd * zp); }
+        else { var e = Math.exp(-ad * zp); Ez = Math.sin(Math.PI * yp) * e * Math.cos(phase); Ey = -(ad / Math.PI) * Math.cos(Math.PI * yp) * e * Math.cos(phase); }
+        arrow(x, y, S * Ez, -S * Ey, ORANGE);
+      }
+    }
+    label("주황 화살 = 전계 E (한 순간)", X0, YB + 46, "#666", "14px " + SANS);
+
+    var xr = X1 + 40, y0 = YT + 4, dy = 34;
+    label("f / f", xr, y0, INK, "italic 20px " + SERIF); label("c", xr + 44, y0 + 7, INK, "italic 13px " + SERIF);
+    label(" = " + r.toFixed(2), xr + 52, y0, INK, "20px " + SERIF);
+    if (above1) {
+      var bk = Math.sqrt(1 - 1 / (r * r));
+      label("전파 (차단 위)", xr, y0 + dy, BLUE, "bold 17px " + SANS);
+      label("β / k = " + bk.toFixed(3), xr, y0 + 2 * dy, INK, "18px " + SERIF);
+      label("λ", xr, y0 + 3 * dy, INK, "italic 18px " + SERIF); label("g", xr + 11, y0 + 3 * dy + 7, INK, "italic 12px " + SERIF);
+      label(" / λ = " + (1 / bk).toFixed(3), xr + 18, y0 + 3 * dy, INK, "18px " + SERIF);
+      label("v", xr, y0 + 4 * dy, INK, "italic 18px " + SERIF); label("p", xr + 10, y0 + 4 * dy + 7, INK, "italic 12px " + SERIF);
+      label(" / c = " + (1 / bk).toFixed(3), xr + 17, y0 + 4 * dy, INK, "18px " + SERIF);
+      label("v", xr, y0 + 5 * dy, INK, "italic 18px " + SERIF); label("g", xr + 10, y0 + 5 * dy + 7, INK, "italic 12px " + SERIF);
+      label(" / c = " + bk.toFixed(3), xr + 17, y0 + 5 * dy, INK, "18px " + SERIF);
+      label("위상이 오른쪽으로 돈다", xr, y0 + 6 * dy, "#666", "14px " + SANS);
+    } else if (atc) {
+      label("차단주파수 그 자리", xr, y0 + dy, ORANGE, "bold 17px " + SANS);
+      label("β = 0: z 로는 못 간다", xr, y0 + 2 * dy, INK, "16px " + SANS);
+      label("평면파가 위아래로만 튕긴다", xr, y0 + 3 * dy, "#666", "14px " + SANS);
+      label("Ey = 0, Ez 와 Hx 만 제자리에서 흔들린다", xr, y0 + 4 * dy, "#666", "14px " + SANS);
+    } else {
+      label("소멸파 (차단 아래)", xr, y0 + dy, ORANGE, "bold 17px " + SANS);
+      label("β = −jα", xr, y0 + 2 * dy, INK, "italic 18px " + SERIF);
+      label("α d = " + ad.toFixed(2), xr, y0 + 3 * dy, INK, "18px " + SERIF);
+      label("1/α = " + (1 / ad).toFixed(2) + " d", xr, y0 + 4 * dy, INK, "18px " + SERIF);
+      label("위상이 돌지 않는다", xr, y0 + 5 * dy, "#666", "14px " + SANS);
+      label("z 를 따라 크기만 준다", xr, y0 + 6 * dy, "#666", "14px " + SANS);
+    }
+  }
+  function step() { if (playing) { phase += 0.05; draw(); } requestAnimationFrame(step); }
+  cv.addEventListener("pointerdown", function (e) { playing = !playing; e.preventDefault(); });
+  slider.addEventListener("input", function () { r = Math.round(parseFloat(slider.value) * 20) / 20; rv.textContent = r.toFixed(2); draw(); });
+  slider.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  draw();
+  window.addEventListener("load", draw);
+  requestAnimationFrame(step);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
