@@ -47,7 +47,7 @@
 <div class="캔버스틀"><canvas id="mstripsim" width="1920" height="800"
         style="min-width:680px;width:100%;max-width:820px;touch-action:none"></canvas></div>
 <div style="max-width:820px;margin:0 auto;font-size:0.72em;display:flex;align-items:center;gap:12px">
-<span style="white-space:nowrap">띠 폭 <i>W</i> (mm)</span>
+<span style="white-space:nowrap">스트립 폭 <i>W</i> (mm)</span>
 <input id="mstripw" type="range" min="0.3" max="10" step="0.05" value="3.05" style="flex:1">
 <span id="mstripwv" style="width:3.4em;text-align:left">3.05</span>
 <span style="color:#666">· FR-4 1.6 mm · 2.4 GHz</span>
@@ -112,7 +112,7 @@
     ctx.beginPath(); ctx.moveTo(X0 + SUBW + 14, YG - D * S); ctx.lineTo(X0 + SUBW + 14, YG); ctx.stroke();
     runs([["d", "italic 17px " + SERIF], [" = 1.6 mm", "16px " + SERIF]], X0 + SUBW + 22, YG - D * S / 2);
     label("실척 단면 · 기판 FR-4 (εr = 4.4)", X0, YG + 30, "#666", "14px " + SANS);
-    label("주황 화살 = 전계 (띠 → 접지면)", X0, YG + 50, "#666", "14px " + SANS);
+    label("주황 화살 = 전계 (스트립 → 접지면)", X0, YG + 50, "#666", "14px " + SANS);
 
     var xr = 560, y0 = 60, dy = 46;
     runs([["W", "italic 22px " + SERIF], [" / ", "22px " + SERIF], ["d", "italic 22px " + SERIF], [" = " + wd.toFixed(2), "22px " + SERIF]], xr, y0);
@@ -124,7 +124,7 @@
     runs([["λ", "italic 22px " + SERIF], [" = λ", "22px " + SERIF], ["0", "14px " + SERIF, INK, 7], [" / √ε", "22px " + SERIF], ["e", "italic 14px " + SERIF, INK, 7],
           [" = " + lam0.toFixed(1) + " / " + Math.sqrt(e).toFixed(3) + " = " + lam.toFixed(1) + " mm", "22px " + SERIF]], xr, y0 + 3.7 * dy);
     runs([["λ", "italic 22px " + SERIF], ["/4 = " + (lam / 4).toFixed(1) + " mm", "22px " + SERIF, BLUE]], xr, y0 + 4.7 * dy);
-    label(z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 크다 → 띠를 넓히세요" : "50 Ω 보다 작다 → 띠를 좁히세요"),
+    label(z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 크다 → 스트립을 넓히세요" : "50 Ω 보다 작다 → 스트립을 좁히세요"),
           xr, y0 + 5.9 * dy, "#666", "15px " + SANS);
   }
   slider.addEventListener("input", function () { wmm = Math.round(parseFloat(slider.value) * 20) / 20; wv.textContent = wmm.toFixed(2); draw(); });
