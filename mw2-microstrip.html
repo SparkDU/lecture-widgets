@@ -124,7 +124,7 @@
     runs([["λ", "italic 22px " + SERIF], [" = λ", "22px " + SERIF], ["0", "14px " + SERIF, INK, 7], [" / √ε", "22px " + SERIF], ["e", "italic 14px " + SERIF, INK, 7],
           [" = " + lam0.toFixed(1) + " / " + Math.sqrt(e).toFixed(3) + " = " + lam.toFixed(1) + " mm", "22px " + SERIF]], xr, y0 + 3.7 * dy);
     runs([["λ", "italic 22px " + SERIF], ["/4 = " + (lam / 4).toFixed(1) + " mm", "22px " + SERIF, BLUE]], xr, y0 + 4.7 * dy);
-    label(z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 높다 → 띠를 넓히세요" : "50 Ω 보다 낮다 → 띠를 좁히세요"),
+    label(z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 크다 → 띠를 넓히세요" : "50 Ω 보다 작다 → 띠를 좁히세요"),
           xr, y0 + 5.9 * dy, "#666", "15px " + SANS);
   }
   slider.addEventListener("input", function () { wmm = Math.round(parseFloat(slider.value) * 20) / 20; wv.textContent = wmm.toFixed(2); draw(); });
