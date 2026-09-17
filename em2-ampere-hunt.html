@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>숨은 전류 찾기 · 전자기학 2</title>
+<!--
+  강의자 주석 (학생 화면에 안 나온다)
+  · 무엇: 4주차(09-24 목, 추석 휴강) 대체 온라인 게임. 무채점. 2~4주차 복습
+      비오·사바르의 감아 도는 자계(1·2단계) · 암페어 주회법칙(전부) · 상쇄(2·4단계)
+      스토크스의 타일 합(4단계) · 회전량 = 전류밀도(5단계) · 솔레노이드(6단계)
+  · 좌표계: x = 화면 오른쪽 · y = 화면 위 · z = 화면 밖(⊙)
+      확인: x × y = (오른쪽) × (위) = 화면 밖 = z  → 오른손 ✅
+      반시계(화면에서 본) 경로의 오른손 법선 = +z → ⊙ 전류가 + 로 세어진다
+  · 물리 판정은 아래 <script id="physics"> 한 블록. 검증 짝 = game/em2-ampere-hunt_검증.py
+    (node 로 이 블록을 돌려 파이썬의 수치 선적분 ∮H·dL 과 대조)
+  · 별 셋 기준 = 정보량 탐욕 풀이기 탐침 수 중앙값 × 1.4 (올림), 별 둘 = 그 + 3. 검증 스크립트가 다시 잰다
+  · 슬러그 em2-ampere-hunt — LMS 링크가 가리킨다. 바꾸지 마라
+-->
+<style>
+  :root { color-scheme: light;
+    --남색: #0b3050; --파랑: #0072B2; --주황: #E69F00; --하늘: #56B4E9;
+    --회색: #777777; --옅은: #f3f6f9; --선: #d8dde3; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    word-break: keep-all; line-height: 1.55;
+  }
+  math { font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", math; }
+  header, main, footer { max-width: 560px; margin-left: auto; margin-right: auto; }
+  header { margin-bottom: 0.8rem; }
+  h1 { font-size: 1.3rem; line-height: 1.35; margin: 0 0 0.1rem; color: var(--남색); }
+  h2 { font-size: 1.05rem; margin: 1.1rem 0 0.45rem; color: var(--남색); }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  ul { margin: 0.2rem 0 0.4rem; padding-left: 1.2rem; }
+  li { margin: 0.18rem 0; }
+  p { margin: 0.35rem 0; }
+  button {
+    font: inherit; font-size: 0.92rem; border-radius: 8px; cursor: pointer;
+    min-height: 42px; padding: 0.35rem 0.8rem;
+    border: 1.5px solid var(--파랑); background: #fff; color: var(--파랑);
+  }
+  button.주 { background: var(--남색); border-color: var(--남색); color: #fff; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .줄 { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.5rem 0; }
+  .상자 { background: var(--옅은); border-left: 4px solid var(--파랑);
+          padding: 0.55rem 0.8rem; border-radius: 4px; margin: 0.6rem 0; }
+  .상자.핵심 { border-left-color: var(--주황); background: #fdf7e7; }
+
+  /* 아이콘: 글꼴에 기대지 않고 그림으로 (폰마다 ⊙ 글리프가 없을 수 있다) */
+  .ic { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.17em;
+        background-size: contain; background-repeat: no-repeat; }
+  .ic.out { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='8' fill='white' stroke='%23E69F00' stroke-width='2.2'/><circle cx='10' cy='10' r='2.6' fill='%23E69F00'/></svg>"); }
+  .ic.in  { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='8' fill='white' stroke='%23E69F00' stroke-width='2.2'/><path d='M6.2 6.2 L13.8 13.8 M13.8 6.2 L6.2 13.8' stroke='%23E69F00' stroke-width='2.2'/></svg>"); }
+  .ic.ccw { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M7.6 16.6 A7 7 0 1 0 3.4 7.6' fill='none' stroke='black' stroke-width='2'/><path d='M2.4 10.6 L6.6 6.2 L1.2 4.6 Z' fill='black'/></svg>"); }
+
+  /* 단계 목록 */
+  .단계들 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .단계 { text-align: left; padding: 0.55rem 0.7rem; min-height: 78px;
+          border: 1.5px solid var(--선); color: #333; }
+  .단계 b { color: var(--남색); display: block; }
+  .단계 .별 { color: var(--주황); letter-spacing: 1px; }
+  .단계 .작게 { font-size: 0.78rem; color: var(--회색); }
+
+  /* 놀이 화면 */
+  .머리 { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .세기 { font-size: 0.86rem; color: var(--회색); text-align: right; }
+  .세기 b { color: var(--남색); font-size: 1.05rem; }
+  .계기 { display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+          border: 2px solid var(--남색); border-radius: 10px; padding: 0.35rem 0.6rem;
+          margin: 0.5rem 0; background: #fff; min-height: 58px; }
+  .계기 math { font-size: 1.35rem; }
+  .칸이름 { font-size: 0.78rem; color: #fff; background: var(--남색); border-radius: 4px;
+           padding: 0.12rem 0.45rem; white-space: nowrap; }
+  #meterVal { font-size: 1.7rem; font-weight: bold; color: var(--남색);
+              min-width: 5.5ch; text-align: left; font-variant-numeric: tabular-nums; }
+  #meterVal.대기 { font-size: 0.88rem; font-weight: normal; color: var(--회색); white-space: nowrap; min-width: 0; }
+  .판틀 { position: relative; }
+  canvas { display: block; margin: 0 auto; touch-action: none;
+           -webkit-user-select: none; user-select: none; }
+  .모드 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0.5rem 0 0.3rem; }
+  .모드 button { border-radius: 0; }
+  .모드 button:first-child { border-radius: 8px 0 0 8px; }
+  .모드 button:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+  .모드 button.켜짐 { background: var(--파랑); color: #fff; }
+  .도구들 { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.3rem 0; }
+  .도구들 button { min-width: 64px; padding: 0.25rem 0.5rem; border-color: var(--선); color: #333; }
+  .도구들 button.켜짐 { border-color: var(--주황); background: #fdf1d6; border-width: 2.5px; }
+  #msg { min-height: 1.6em; font-size: 0.95rem; }
+  .표시수 { font-size: 0.85rem; color: #555; margin: 0.25rem 0; }
+  .예시 { display: block; margin: 0.35rem 0 0.1rem; max-width: 100%; height: auto; }
+  .예시글 { display: block; font-size: 0.78rem; color: #777; }
+  #msg.좋음 { color: var(--남색); font-weight: bold; }
+  #msg.주의 { color: #8a5a00; }
+  .기록 { list-style: none; padding: 0; margin: 0.3rem 0; font-size: 0.9rem; }
+  .기록 li { display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0.4rem;
+             border-bottom: 1px solid #eee; cursor: pointer; }
+  .기록 li.고름 { background: #e6f2fb; }
+  .기록 .번호 { width: 2.2em; color: var(--회색); }
+  .기록 .칸 { width: 4.5em; }
+  .기록 .돌기 { width: 4.2em; color: var(--회색); }
+  .기록 .값 { margin-left: auto; font-weight: bold; color: var(--남색);
+              font-variant-numeric: tabular-nums; }
+  .기록 .뒤 { font-size: 0.75rem; color: var(--회색); }
+
+  /* 결과 카드 */
+  .카드 { border: 2px solid var(--남색); border-radius: 12px; padding: 0.9rem 1rem; }
+  .카드 table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+  .카드 td { padding: 0.3rem 0.2rem; border-bottom: 1px solid #eee; }
+  .카드 td.별 { color: var(--주황); letter-spacing: 1px; white-space: nowrap; }
+  .카드 td.수 { text-align: right; color: var(--회색); white-space: nowrap; }
+  .합계 { font-size: 1.15rem; font-weight: bold; color: var(--남색); margin-top: 0.5rem; }
+  .캡처안내 { font-size: 0.9rem; color: #8a5a00; background: #fdf7e7; border-left: 4px solid var(--주황);
+             padding: 0.45rem 0.7rem; border-radius: 4px; margin: 0.7rem 0 0.3rem; }
+
+  footer {
+    margin-top: 2rem; padding-top: 0.8rem; border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+<h1>숨은 전류 찾기</h1>
+<div class="과목">전자기학 2 · 암페어 주회법칙과 회전</div>
+</header>
+
+<main>
+<!-- ═══════════ 첫 화면 ═══════════ -->
+<section id="scr-home">
+  <div class="상자 핵심">
+    <p>판 어딘가에 긴 도선이 화면을 뚫고 지나갑니다.
+    폐경로를 그려 그 경로의 <b>측정값</b>을 보고, 숨은 도선을 모두 찾아내세요.</p>
+  </div>
+
+  <h2>하는 법</h2>
+  <ul>
+    <li><i class="ic out"></i> 는 화면 <b>밖으로</b>, <i class="ic in"></i> 는 화면 <b>안으로</b> 흐르는 전류입니다.</li>
+    <li>손가락이나 마우스로 격자선을 따라 끌어서 폐경로를 그리세요. 이 게임에서는 폐경로를 <b>올가미</b>라고 부릅니다.</li>
+    <li>올가미를 닫으면 판 위의 <b>측정값</b> 칸에
+      <math><mo>∮</mo><mover accent="true"><mi>H</mi><mo stretchy="false">→</mo></mover><mo>·</mo><mi>d</mi><mover accent="true"><mi>L</mi><mo stretchy="false">→</mo></mover></math>
+      값이 나옵니다.</li>
+    <li>암페어 주회법칙(Ampère's circuital law): 이 값은 <b>올가미가 감싼 전류의 합</b>입니다.</li>
+    <li><i class="ic ccw"></i> 반시계 방향으로 돌면 <i class="ic out"></i> 가 +, <i class="ic in"></i> 가 − 로 세어집니다. 시계 방향으로 돌면 부호가 바뀝니다.</li>
+    <li>올가미(폐경로)는 자기 선과 겹칠 수 없습니다. 지나온 선을 되짚으면 지워지고, 출발점까지 돌아와서 떼면 잽니다.</li>
+    <li>「전류 표시하기」로 <b>도선이 있는 칸만</b> 표시하고 「정답 확인」을 누르세요. 같은 표시를 다시 누르면 지워집니다.</li>
+    <li>올가미를 적게 쓸수록 별이 많습니다. 틀린 제출은 올가미 2번으로 칩니다.</li>
+    <li>점수는 어디로도 보내지 않습니다. 별 기록은 이 기기에만 남습니다.</li>
+    <li>몇 번이든 다시 해 보세요. 판은 할 때마다 바뀝니다.</li>
+  </ul>
+
+  <h2>단계</h2>
+  <div class="단계들" id="levelCards"></div>
+  <div class="줄"><button id="toResult">나의 기록 보기</button></div>
+</section>
+
+<!-- ═══════════ 놀이 화면 ═══════════ -->
+<section id="scr-play" hidden>
+  <div class="머리">
+    <h2 id="lvTitle" style="margin:0.2rem 0">단계</h2>
+    <div class="세기">올가미 <b id="probeCount">0</b>번<br><span id="goal"></span></div>
+  </div>
+  <div class="상자" id="lvInfo"></div>
+
+  <div class="계기" aria-live="polite">
+    <span class="칸이름">측정값</span>
+    <math><mo>∮</mo><mover accent="true"><mi>H</mi><mo stretchy="false">→</mo></mover><mo>·</mo><mi>d</mi><mover accent="true"><mi>L</mi><mo stretchy="false">→</mo></mover><mo>=</mo></math>
+    <span id="meterVal" class="대기">올가미를 그리세요</span>
+  </div>
+
+  <div class="판틀"><canvas id="board" width="400" height="400" aria-label="게임 판"></canvas></div>
+
+  <div class="모드">
+    <button id="modeLoop" class="켜짐">올가미 그리기</button>
+    <button id="modeMark">전류 표시하기</button>
+  </div>
+  <div class="도구들" id="tools" hidden></div>
+
+  <p id="markCount" class="표시수"></p>
+  <p id="msg"></p>
+
+  <div class="줄">
+    <button id="submit" class="주">정답 확인</button>
+    <button id="hintBtn">힌트</button>
+    <button id="giveUp" hidden>정답 보기</button>
+    <button id="nextBtn" class="주" hidden>다음 단계</button>
+  </div>
+  <div class="상자" id="hintBox" hidden></div>
+  <div class="상자 핵심" id="learned" hidden></div>
+
+  <h2 style="font-size:0.95rem">잰 올가미 <span style="font-weight:normal;color:#777;font-size:0.82rem">(누르면 판에 다시 보입니다)</span></h2>
+  <ul class="기록" id="log"></ul>
+
+  <div class="줄">
+    <button id="newBoard">같은 단계 새 판</button>
+    <button id="toHome">단계 목록</button>
+  </div>
+</section>
+
+<!-- ═══════════ 기록 화면 ═══════════ -->
+<section id="scr-result" hidden>
+  <div class="카드">
+    <div style="font-size:1.1rem;font-weight:bold;color:var(--남색)">숨은 전류 찾기 · 나의 기록</div>
+    <div style="font-size:0.85rem;color:#777">전자기학 2 · <span id="today"></span></div>
+    <table id="recTable"></table>
+    <div class="합계" id="recTotal"></div>
+  </div>
+  <p class="캡처안내">위 네모 칸을 화면 캡처해 LMS 에 올려 주세요.</p>
+  <div class="줄"><button id="backHome" class="주">단계 목록으로</button></div>
+</section>
+</main>
+
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     물리 판정 — 화면과 무관한 순수 함수만. 검증 스크립트가 node 로 이 블록을 돌린다.
+     좌표: 격자점 (X, Y), X = 0..n 오른쪽, Y = 0..n 위. 칸 (c, r) 의 중심 = (c+0.5, r+0.5), r 은 아래부터.
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="physics">
+var PHYS = (function () {
+  "use strict";
+
+  // 감은 횟수(winding number). 반시계로 한 번 감으면 +1. 점은 칸 중심이라 격자선 위에 있을 수 없다
+  function windingNumber(path, px, py) {
+    var wn = 0, m = path.length;
+    for (var i = 0; i < m; i++) {
+      var x0 = path[i][0], y0 = path[i][1];
+      var x1 = path[(i + 1) % m][0], y1 = path[(i + 1) % m][1];
+      var left = (x1 - x0) * (py - y0) - (px - x0) * (y1 - y0);
+      if (y0 <= py) { if (y1 > py && left > 0) wn++; }
+      else          { if (y1 <= py && left < 0) wn--; }
+    }
+    return wn;
+  }
+
+  // 암페어 주회법칙: ∮H·dL = Σ (감은 횟수 × 전류)
+  function circulation(path, wires) {
+    var s = 0;
+    for (var k = 0; k < wires.length; k++) {
+      s += windingNumber(path, wires[k].x, wires[k].y) * wires[k].I;
+    }
+    return s;
+  }
+
+  // 무한 직선 전류들의 자계 H = I/(2πρ) a_φ 의 합. +I 는 +z(화면 밖)
+  function fieldAt(x, y, wires) {
+    var hx = 0, hy = 0;
+    for (var k = 0; k < wires.length; k++) {
+      var dx = x - wires[k].x, dy = y - wires[k].y, r2 = dx * dx + dy * dy;
+      if (r2 < 1e-12) continue;
+      var f = wires[k].I / (2 * Math.PI * r2);
+      hx += -f * dy;
+      hy +=  f * dx;
+    }
+    return [hx, hy];
+  }
+
+  // 부호 있는 넓이: + 면 반시계
+  function signedArea(path) {
+    var a = 0, m = path.length;
+    for (var i = 0; i < m; i++) {
+      var p = path[i], q = path[(i + 1) % m];
+      a += p[0] * q[1] - q[0] * p[1];
+    }
+    return a / 2;
+  }
+
+  function enclosedCells(path, n) {
+    var out = [];
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+      var w = windingNumber(path, c + 0.5, r + 0.5);
+      if (w !== 0) out.push({ c: c, r: r, w: w });
+    }
+    return out;
+  }
+
+  // 판 밖으로 길게 이어지는 줄 (자계 그림 전용). 판 위 칸만 올가미에 잡힌다
+  var EXT = 1000;
+  function rowWires(n, r, I) {
+    var out = [];
+    for (var c = -EXT; c < n + EXT; c++) out.push({ x: c + 0.5, y: r + 0.5, I: I });
+    return out;
+  }
+
+  // 단계 정의. stars = [별 셋 상한, 별 둘 상한] (올가미 수)
+  var LEVELS = [
+    { id: 1, name: "도선 하나",        n: 4, kind: "wires",    currents: [1],        randomSign: true,  showField: true,  mags: [1],    stars: [2, 5] },
+    { id: 2, name: "0 이면 비었을까",   n: 5, kind: "wires",    currents: [1, -1],    randomSign: false, showField: true,  mags: [1],    stars: [2, 5] },
+    { id: 3, name: "화살표 없이",       n: 5, kind: "wires",    currents: [1, 2],     randomSign: false, showField: false, mags: [1, 2], stars: [7, 10] },
+    { id: 4, name: "지워지는 전류",     n: 5, kind: "wires",    currents: [1, 1, -1], randomSign: false, showField: false, mags: [1],    stars: [12, 15] },
+    { id: 5, name: "판 전류 속",        n: 6, kind: "slab",     showField: true,  mags: [1],    stars: [3, 6] },
+    { id: 6, name: "솔레노이드 단면",   n: 6, kind: "solenoid", showField: false, mags: [1],    stars: [5, 8] }
+  ];
+
+  function randInt(rng, a, b) { return a + Math.floor(rng() * (b - a + 1)); }
+
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6D2B79F5) >>> 0;
+      var z = t;
+      z = Math.imul(z ^ (z >>> 15), z | 1);
+      z ^= z + Math.imul(z ^ (z >>> 7), z | 61);
+      return ((z ^ (z >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // 판 만들기. cells[r*n+c] = 그 칸의 전류(A, +는 화면 밖)
+  function makeBoard(level, rng) {
+    var n = level.n, cells = new Array(n * n).fill(0), fieldWires = [], info = {};
+    if (level.kind === "wires") {
+      var sign = (level.randomSign && rng() < 0.5) ? -1 : 1;
+      var free = [];
+      for (var i = 0; i < n * n; i++) free.push(i);
+      for (var k = 0; k < level.currents.length; k++) {
+        var j = Math.floor(rng() * free.length);
+        cells[free[j]] = sign * level.currents[k];
+        free.splice(j, 1);
+      }
+    } else if (level.kind === "slab") {
+      var t = randInt(rng, 2, 3);
+      var s = randInt(rng, 1, n - 1 - t);
+      var sg = rng() < 0.5 ? -1 : 1;
+      for (var r = s; r < s + t; r++) {
+        for (var c = 0; c < n; c++) cells[r * n + c] = sg;
+        fieldWires = fieldWires.concat(rowWires(n, r, sg));
+      }
+      info = { rows: t, start: s, sign: sg };
+    } else if (level.kind === "solenoid") {
+      var a, b;
+      do { a = randInt(rng, 0, n - 1); b = randInt(rng, 0, n - 1); } while (Math.abs(a - b) < 2);
+      for (var c2 = 0; c2 < n; c2++) { cells[a * n + c2] = 1; cells[b * n + c2] = -1; }
+      fieldWires = rowWires(n, a, 1).concat(rowWires(n, b, -1));
+      info = { outRow: a, inRow: b };
+    }
+    var wires = [];
+    for (var r2 = 0; r2 < n; r2++) for (var c3 = 0; c3 < n; c3++) {
+      var I = cells[r2 * n + c3];
+      if (I !== 0) wires.push({ x: c3 + 0.5, y: r2 + 0.5, I: I, c: c3, r: r2 });
+    }
+    if (level.kind === "wires") fieldWires = wires;
+    return { n: n, cells: cells, wires: wires, fieldWires: fieldWires, info: info };
+  }
+
+  // 표시값: 0 없음, ±1 ±2 전류, 9 = 「비었다」 메모 (0 으로 본다)
+  function countWrong(marks, board) {
+    var bad = 0;
+    for (var i = 0; i < board.cells.length; i++) {
+      var m = marks[i] === 9 ? 0 : marks[i];
+      if (m !== board.cells[i]) bad++;
+    }
+    return bad;
+  }
+
+  function starsFor(level, probes) {
+    if (probes <= level.stars[0]) return 3;
+    if (probes <= level.stars[1]) return 2;
+    return 1;
+  }
+
+  return {
+    windingNumber: windingNumber, circulation: circulation, fieldAt: fieldAt,
+    signedArea: signedArea, enclosedCells: enclosedCells, rowWires: rowWires,
+    LEVELS: LEVELS, makeBoard: makeBoard, countWrong: countWrong, starsFor: starsFor,
+    mulberry32: mulberry32, EXT: EXT
+  };
+})();
+if (typeof module !== "undefined" && module.exports) { module.exports = PHYS; }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     화면 · 조작
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  "use strict";
+  var P = PHYS;
+  var $ = function (id) { return document.getElementById(id); };
+  var C_BLUE = "#0072B2", C_ORANGE = "#E69F00", C_NAVY = "#0b3050";
+  var MINUS = "−";
+  var STORE = "em2-ampere-hunt-v1";
+
+  // 5·6단계 안내의 예시 그림: 가로줄 전류 (top → bottom, "o" 밖으로 · "x" 안으로 · "" 빈 줄)
+  function bandSvg(rows) {
+    var cw = 24, pad = 26, w = pad * 2 + 6 * cw, h = rows.length * cw + 4;
+    var s = "<svg class='예시' viewBox='0 0 " + w + " " + h + "' width='" + w + "' height='" + h + "' aria-hidden='true'>";
+    rows.forEach(function (k, r) {
+      var y = 2 + r * cw;
+      if (k) s += "<rect x='" + pad + "' y='" + y + "' width='" + (6 * cw) + "' height='" + cw + "' fill='#eceff2'/>";
+      for (var c = 0; c < 6; c++) {
+        s += "<rect x='" + (pad + c * cw) + "' y='" + y + "' width='" + cw + "' height='" + cw + "' fill='none' stroke='#b9c1ca'/>";
+        if (!k) continue;
+        var cx = pad + c * cw + cw / 2, cy = y + cw / 2;
+        s += "<circle cx='" + cx + "' cy='" + cy + "' r='7' fill='white' stroke='#E69F00' stroke-width='2'/>";
+        if (k === "o") s += "<circle cx='" + cx + "' cy='" + cy + "' r='2.2' fill='#E69F00'/>";
+        else s += "<path d='M" + (cx - 4) + " " + (cy - 4) + " L" + (cx + 4) + " " + (cy + 4) + " M" + (cx + 4) + " " + (cy - 4) + " L" + (cx - 4) + " " + (cy + 4) + "' stroke='#E69F00' stroke-width='2'/>";
+      }
+      if (k) {
+        [pad - 18, pad - 12, pad - 6, pad + 6 * cw + 6, pad + 6 * cw + 12, pad + 6 * cw + 18].forEach(function (x) {
+          s += "<circle cx='" + x + "' cy='" + (y + cw / 2) + "' r='1.6' fill='#777'/>";
+        });
+      }
+    });
+    return s + "</svg>";
+  }
+
+  // 단계별 안내문 (학생에게 보인다)
+  var TEXT = {
+    1: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 도선 하나. <i class='ic out'></i> 또는 <i class='ic in'></i>, 1 A.</li>" +
+            "<li><b>보이는 것</b>: 파란 화살표는 그 자리의 자계입니다.</li>" +
+            "<li><b>할 일</b>: 화살표가 감아 도는 중심 칸에 전류를 표시하세요. 그 칸을 감싸는 올가미로 확인해 보세요.</li>" +
+            "</ul>",
+      hint: "<ul><li>화살표가 반시계로 돌면 <i class='ic out'></i>, 시계로 돌면 <i class='ic in'></i> 입니다. 오른손 엄지를 전류 방향에 두면 네 손가락이 자계 방향입니다.</li>" +
+            "<li>도선이 <b>없는</b> 칸 하나만 감싸는 올가미도 그려 보세요. 화살표는 휘어 도는데 값은 몇이 나오나요?</li></ul>",
+      learned: "<ul><li>자계는 도선을 감아 돌고, 멀어질수록 약해집니다. 화살표 길이를 보세요.</li>" +
+               "<li>화살표가 휘어 돌아도 도선이 없는 칸의 올가미 값은 0 입니다. 그 칸의 회전량이 0 이라는 뜻입니다.</li></ul>"
+    },
+    2: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 도선 둘. <i class='ic out'></i> 1 A 하나, <i class='ic in'></i> 1 A 하나.</li>" +
+            "<li><b>보이는 것</b>: 파란 화살표는 두 도선의 자계를 더한 것입니다.</li>" +
+            "<li><b>할 일</b>: 두 도선을 찾아 표시하세요. 먼저 판 전체를 한 바퀴 도는 올가미를 그려 보세요.</li>" +
+            "</ul>",
+      hint: "<ul><li>0 은 비었다는 뜻이 아닐 수 있습니다. +1 과 " + MINUS + "1 이 함께 들어 있어도 합은 0 입니다.</li>" +
+            "<li>화살표는 두 도선의 자계를 더한 것입니다. 한 도선 쪽으로 다가가면 그 도선의 몫이 커집니다.</li></ul>",
+      learned: "<ul><li>측정값은 감싼 전류의 <b>합</b>만 보여 줍니다. 방향이 반대인 전류는 서로 지워집니다.</li>" +
+               "<li>판의 자계는 도선마다의 자계를 더한 것입니다 (중첩).</li></ul>"
+    },
+    3: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 도선 둘. <i class='ic out'></i> 1 A 하나, <i class='ic out'></i> 2 A 하나.</li>" +
+            "<li><b>보이는 것</b>: 이제 자계가 보이지 않습니다.</li>" +
+            "<li><b>할 일</b>: 측정값만으로 두 도선을 찾아 표시하세요.</li>" +
+            "</ul>",
+      hint: "<ul><li>판을 반으로 가르는 직사각형 올가미를 반시계로 그려 보세요. 값이 0, 1, 2, 3 중 무엇이냐로 두 도선이 어느 쪽에 있는지 갈립니다.</li>" +
+            "<li>감싼 칸이 같으면 올가미 모양이 달라도 값은 같습니다. 구불구불하게 그려도 됩니다.</li></ul>",
+      learned: "<ul><li>경로의 모양과 길이는 값에 상관없습니다. 경로가 <b>감싼 전류</b>만 남습니다.</li>" +
+               "<li>그래서 측정값만으로는 도선이 올가미 안 <b>어디에</b> 있는지 모릅니다. 올가미를 나눠 가며 좁혀야 합니다.</li></ul>"
+    },
+    4: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 도선 셋. <i class='ic out'></i> 1 A 둘, <i class='ic in'></i> 1 A 하나.</li>" +
+            "<li><b>보이는 것</b>: 자계가 보이지 않습니다.</li>" +
+            "<li><b>할 일</b>: 세 도선을 찾아 표시하세요. 측정값이 0 인 곳에도 <i class='ic out'></i> 와 <i class='ic in'></i> 가 짝으로 숨어 있을 수 있습니다.</li>" +
+            "</ul>",
+      hint: "<ul><li>큰 올가미의 값은 그 안을 나눈 작은 올가미 값들의 합입니다. 안쪽 경계는 서로 반대로 지나가 지워지기 때문입니다.</li>" +
+            "<li>그래서 큰 올가미를 한 번 재 두면, 한쪽만 재도 나머지 쪽 값은 빼기로 나옵니다.</li>" +
+            "<li>한 칸짜리 올가미는 그 칸을 확실히 알려 줍니다.</li></ul>",
+      learned: "<ul><li>작은 올가미 값의 합 = 바깥 둘레 올가미의 값. 4주차의 <b>스토크스 정리</b>입니다.</li>" +
+               "<li>한 칸 올가미 값을 칸 넓이로 나눈 것이 그 칸 안의 평균 회전량입니다. 칸마다의 올가미 값을 모두 더하면 둘레의 값이 됩니다.</li></ul>"
+    },
+    5: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 전류가 흐르는 가로줄 두세 줄이 붙어 있습니다. 두꺼운 판에 흐르는 전류(판 전류)를 자른 단면입니다." +
+              bandSvg(["", "o", "o", ""]) + "<span class='예시글'>예시입니다. 자리, 줄 수, 방향은 판마다 다릅니다.</span></li>" +
+            "<li>줄은 판의 왼쪽, 오른쪽 끝 너머로도 계속 이어집니다. 줄의 모든 칸에 같은 방향으로 1 A 씩 흐릅니다.</li>" +
+            "<li><b>보이는 것</b>: 파란 화살표가 모두 가로로 곧게 뻗어 있습니다.</li>" +
+            "<li><b>할 일</b>: 전류가 흐르는 줄과 방향을 찾아 표시하세요. 「줄 전체」가 켜져 있어 한 번 누르면 한 줄이 모두 표시됩니다.</li>" +
+            "<li><b>생각할 것</b>: 자계가 곧으면 회전량은 0 일까요? 화살표 길이가 위아래로 달라지는 곳에 한 칸 올가미를 그려 보세요.</li>" +
+            "</ul>",
+      hint: "<ul><li>판 전류의 위와 아래에서 자계 방향은 반대입니다. 판 안에서는 한가운데로 갈수록 화살표가 짧아집니다.</li>" +
+            "<li>방향은 오른손으로 정합니다. " + "<i class='ic out'></i>" + " 판이면 판 위쪽 자계는 왼쪽, 아래쪽은 오른쪽입니다.</li>" +
+            "<li>한 칸 올가미 값을 칸 넓이로 나누면 그 칸 안의 평균 회전량입니다.</li></ul>",
+      learned: "<ul><li>자계가 곧아도 회전량이 있을 수 있습니다. 판 전류 속 칸은 한 칸 올가미 값이 0 이 아닙니다.</li>" +
+               "<li>회전량은 그 자리의 전류밀도와 같습니다 (4주차 암페어 법칙의 미분형). 전류가 없는 칸은 한 칸 올가미 값이 0 입니다.</li>" +
+               "<li>격자점에서 보면 판 밖은 위아래 모두 세기가 고르고 방향만 반대입니다 (3주차 면전류).</li>" +
+               "<li>이 게임은 고르게 퍼진 판 전류를 칸마다 도선 한 가닥으로 나타냈습니다.</li></ul>"
+    },
+    6: {
+      info: "<ul>" +
+            "<li><b>숨은 것</b>: 판을 가로지르는 <i class='ic out'></i> 줄 하나와 <i class='ic in'></i> 줄 하나. 칸마다 1 A 입니다." +
+              bandSvg(["o", "", "", "x"]) + "<span class='예시글'>예시입니다. 자리와 방향은 판마다 다릅니다.</span></li>" +
+            "<li>두 줄 사이에는 빈 줄이 하나 이상 있고, 두 줄 모두 판 끝 너머로 계속 이어집니다.</li>" +
+            "<li><b>보이는 것</b>: 자계가 보이지 않습니다. 풀면 보여 드립니다.</li>" +
+            "<li><b>할 일</b>: 두 줄의 자리와 방향을 찾아 표시하세요.</li>" +
+            "</ul>",
+      hint: "<ul><li>판의 위아래 끝까지 곧게 걸친 직사각형 올가미는 두 줄을 같은 칸 수만큼 감싸 0 이 됩니다.</li>" +
+            "<li>아래쪽 몇 줄만 감싸는 올가미로 어디서 값이 바뀌는지 찾아보세요.</li></ul>",
+      learned: "<ul><li>솔레노이드를 자른 단면입니다. 격자점에서 보면 두 줄 <b>사이</b>에만 곧고 고른 자계가 있고, 밖은 거의 0 입니다 (3주차).</li>" +
+               "<li>두 줄 사이 칸에는 전류가 없어 한 칸 올가미 값이 0 입니다. 자계가 있어도 그 칸의 회전량은 0 입니다.</li>" +
+               "<li>이 게임은 코일의 전류를 칸마다 도선 한 가닥으로 나타냈습니다.</li></ul>"
+    }
+  };
+
+  // ── 기록 (이 브라우저에만) ──
+  function loadRec() { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; } }
+  function saveRec(rec) { try { localStorage.setItem(STORE, JSON.stringify(rec)); return true; } catch (e) { return false; } }
+  function stars(k) { return "★★★".slice(0, k) + "☆☆☆".slice(0, 3 - k); }
+  function fmt(v) { return (v > 0 ? "+" : v < 0 ? MINUS : "") + Math.abs(v) + " A"; }
+
+  // ── 화면 전환 ──
+  function show(id) {
+    ["scr-home", "scr-play", "scr-result"].forEach(function (s) { $(s).hidden = (s !== id); });
+    window.scrollTo(0, 0);
+  }
+
+  function buildCards() {
+    var rec = loadRec(), box = $("levelCards");
+    box.innerHTML = "";
+    P.LEVELS.forEach(function (lv, idx) {
+      var r = rec[lv.id], b = document.createElement("button");
+      b.className = "단계";
+      var sub = r ? (r.stars > 0 ? "<span class='별'>" + stars(r.stars) + "</span> <span class='작게'>올가미 " + r.probes + "번</span>"
+                                 : "<span class='작게'>정답을 보았습니다</span>")
+                  : "<span class='작게'>" + lv.n + " × " + lv.n + " 판" + (lv.showField ? ", 자계 보임" : "") + "</span>";
+      b.innerHTML = "<b>" + lv.id + "단계 · " + lv.name + "</b>" + sub;
+      b.onclick = function () { startLevel(idx); };
+      box.appendChild(b);
+    });
+  }
+
+  function buildResult() {
+    var rec = loadRec(), rows = "", tot = 0;
+    P.LEVELS.forEach(function (lv) {
+      var r = rec[lv.id];
+      var st = r ? (r.stars > 0 ? stars(r.stars) : "정답 봄") : "안 함";
+      var pr = (r && r.stars > 0) ? "올가미 " + r.probes + "번" : "";
+      if (r && r.stars > 0) tot += r.stars;
+      var cls = (r && r.stars > 0) ? "별" : "수";
+      rows += "<tr><td>" + lv.id + "단계 · " + lv.name + "</td><td class='" + cls + "'>" + st + "</td><td class='수'>" + pr + "</td></tr>";
+    });
+    $("recTable").innerHTML = rows;
+    $("recTotal").textContent = "별 " + tot + " / 18";
+    var d = new Date();
+    $("today").textContent = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    show("scr-result");
+  }
+
+  // ── 놀이 상태 ──
+  var S = null;
+  var cv = $("board"), ctx = cv.getContext("2d");
+  var G = { W: 400, pad: 24, cell: 88, dpr: 1 };
+
+  function startLevel(idx) {
+    var lv = P.LEVELS[idx];
+    S = {
+      idx: idx, lv: lv, board: P.makeBoard(lv, Math.random),
+      marks: new Array(lv.n * lv.n).fill(0), probes: 0, log: [],
+      mode: "loop", tool: 1, drawing: null, shown: -1, painting: null, pid: null, rowMode: false,
+      solved: false, gaveUp: false, wrong: 0
+    };
+    $("lvTitle").textContent = lv.id + "단계 · " + lv.name;
+    $("lvInfo").innerHTML = TEXT[lv.id].info;
+    $("hintBox").innerHTML = TEXT[lv.id].hint;
+    $("hintBox").hidden = true;
+    $("learned").innerHTML = "<b>이 단계에서 본 것</b>" + TEXT[lv.id].learned;
+    $("learned").hidden = true;
+    $("goal").textContent = "★★★ 는 " + lv.stars[0] + "번 이내";
+    $("nextBtn").hidden = true;
+    $("giveUp").hidden = true;
+    $("submit").disabled = false;
+    buildTools();
+    setMode("loop");
+    setMsg("", "");
+    meter(null);
+    show("scr-play");
+    resize();
+    renderLog();
+    updateCount();
+  }
+
+  function buildTools() {
+    var t = $("tools"), lv = S.lv, list = [];
+    lv.mags.forEach(function (m) { list.push({ v: m, html: "<i class='ic out'></i> " + m + " A", label: "화면 밖으로 " + m + " A" }); });
+    lv.mags.forEach(function (m) { list.push({ v: -m, html: "<i class='ic in'></i> " + m + " A", label: "화면 안으로 " + m + " A" }); });
+    list.push({ v: 9, html: "빈칸 메모", label: "빈칸이라고 메모" });
+    list.push({ v: 0, html: "지우개", label: "지우개" });
+    t.innerHTML = "";
+    list.forEach(function (it) {
+      var b = document.createElement("button");
+      b.innerHTML = it.html;
+      b.dataset.v = it.v;
+      b.setAttribute("aria-label", it.label);
+      b.onclick = function () { S.tool = it.v; markTools(); };
+      t.appendChild(b);
+    });
+    S.rowMode = (lv.kind !== "wires");
+    if (lv.kind !== "wires") {
+      var rb = document.createElement("button");
+      rb.id = "rowBtn";
+      rb.onclick = function () { S.rowMode = !S.rowMode; markTools(); };
+      t.appendChild(rb);
+    }
+    S.tool = 1;
+    markTools();
+  }
+  function markTools() {
+    Array.prototype.forEach.call($("tools").querySelectorAll("button[data-v]"), function (b) {
+      b.classList.toggle("켜짐", Number(b.dataset.v) === S.tool);
+    });
+    var rb = $("rowBtn");
+    if (rb) {
+      rb.textContent = "줄 전체: " + (S.rowMode ? "켬" : "끔");
+      rb.classList.toggle("켜짐", S.rowMode);
+    }
+  }
+  function updateMarkCount() {
+    var o = 0, k = 0;
+    S.marks.forEach(function (v) { if (v === 1 || v === 2) o++; else if (v === -1 || v === -2) k++; });
+    $("markCount").innerHTML = "표시한 칸: <i class='ic out'></i> " + o + "칸, <i class='ic in'></i> " + k + "칸";
+  }
+  function setMode(m) {
+    S.mode = m;
+    $("modeLoop").classList.toggle("켜짐", m === "loop");
+    $("modeMark").classList.toggle("켜짐", m === "mark");
+    $("tools").hidden = (m !== "mark");
+  }
+  function setMsg(text, kind) { var e = $("msg"); e.innerHTML = text; e.className = kind || ""; }
+  function meter(v) {
+    var e = $("meterVal");
+    if (v === null) { e.textContent = "올가미를 그리세요"; e.className = "대기"; }
+    else if (v === "drawing") { e.textContent = "출발점까지 오세요"; e.className = "대기"; }
+    else if (v === "closing") { e.textContent = "떼면 잽니다"; e.className = "대기"; }
+    else { e.textContent = fmt(v); e.className = ""; }
+  }
+  function updateCount() { $("probeCount").textContent = S.probes; }
+
+  // ── 판 크기 ──
+  function resize() {
+    if (!S) return;
+    var wrap = cv.parentElement.clientWidth || 360;
+    var W = Math.min(wrap, 460);
+    G.dpr = window.devicePixelRatio || 1;
+    G.W = W;
+    G.pad = Math.max(20, Math.round(W * 0.07));
+    G.cell = (W - 2 * G.pad) / S.lv.n;
+    cv.style.width = W + "px";
+    cv.style.height = W + "px";
+    cv.width = Math.round(W * G.dpr);
+    cv.height = Math.round(W * G.dpr);
+    render();
+  }
+  window.addEventListener("resize", resize);
+
+  function sx(X) { return G.pad + X * G.cell; }
+  function sy(Y) { return G.pad + (S.lv.n - Y) * G.cell; }
+
+  function pointer(e) {
+    var rc = cv.getBoundingClientRect();
+    return { x: (e.clientX - rc.left) * (G.W / rc.width), y: (e.clientY - rc.top) * (G.W / rc.width) };
+  }
+  function nearestVertex(p) {
+    var n = S.lv.n;
+    var X = Math.round((p.x - G.pad) / G.cell), Yt = Math.round((p.y - G.pad) / G.cell);
+    X = Math.max(0, Math.min(n, X)); Yt = Math.max(0, Math.min(n, Yt));
+    return [X, n - Yt];
+  }
+  function cellAt(p) {
+    var n = S.lv.n;
+    var c = Math.floor((p.x - G.pad) / G.cell), rt = Math.floor((p.y - G.pad) / G.cell);
+    if (c < 0 || c >= n || rt < 0 || rt >= n) return -1;
+    return (n - 1 - rt) * n + c;
+  }
+  function same(a, b) { return a[0] === b[0] && a[1] === b[1]; }
+
+  // ── 올가미 그리기 ──
+  // 출발점에 닿으면 「닫힘 미리보기」. 손을 떼야 잰다. 닫힌 채로 직전 점으로 되짚으면 다시 열린다
+  function stepToward(t) {
+    var d = S.drawing, path = d.path, guard = 0;
+    if (d.closed) {
+      if (same(t, path[path.length - 1])) { d.closed = false; meter("drawing"); }
+      return;
+    }
+    while (guard++ < 64) {
+      var e = path[path.length - 1];
+      if (same(e, t)) break;
+      var dx = t[0] - e[0], dy = t[1] - e[1], nx;
+      if (Math.abs(dx) >= Math.abs(dy)) nx = [e[0] + Math.sign(dx), e[1]];
+      else nx = [e[0], e[1] + Math.sign(dy)];
+      if (path.length >= 2 && same(nx, path[path.length - 2])) { path.pop(); unblock(d); continue; }
+      if (same(nx, path[0])) {
+        if (path.length >= 4) { d.closed = true; unblock(d); meter("closing"); }
+        break;
+      }
+      var used = false;
+      for (var i = 0; i < path.length; i++) if (same(path[i], nx)) { used = true; break; }
+      if (used) {
+        if (!d.blocked) { d.blocked = true; setMsg("올가미는 자기 선과 겹칠 수 없습니다. 지나온 선을 되짚으면 지워집니다.", "주의"); }
+        break;
+      }
+      path.push(nx);
+      unblock(d);
+    }
+  }
+  function unblock(d) { if (d.blocked) { d.blocked = false; setMsg("", ""); } }
+
+  function finishLoop() {
+    var path = S.drawing.path.slice();
+    var val = P.circulation(path, S.board.wires);
+    var cells = P.enclosedCells(path, S.lv.n).length;
+    var ccw = P.signedArea(path) > 0;
+    if (!S.solved && !S.gaveUp) { S.probes++; updateCount(); }
+    S.log.push({ path: path, val: val, cells: cells, ccw: ccw, after: S.solved || S.gaveUp });
+    S.shown = S.log.length - 1;
+    meter(val);
+    renderLog();
+  }
+
+  // ── 표시하기 ── 끌면 지나간 칸을 빠짐없이, 「줄 전체」면 그 줄을 모두
+  function paintCell(i) {
+    var n = S.lv.n;
+    if (S.rowMode) {
+      var r = Math.floor(i / n);
+      for (var c = 0; c < n; c++) S.marks[r * n + c] = S.painting.val;
+    } else {
+      S.marks[i] = S.painting.val;
+    }
+  }
+  function paintTo(i) {
+    var n = S.lv.n, last = S.painting.last;
+    var c0 = last % n, r0 = Math.floor(last / n), c1 = i % n, r1 = Math.floor(i / n);
+    var steps = Math.max(Math.abs(c1 - c0), Math.abs(r1 - r0));
+    for (var s = 1; s <= steps; s++) {
+      paintCell(Math.round(r0 + (r1 - r0) * s / steps) * n + Math.round(c0 + (c1 - c0) * s / steps));
+    }
+    S.painting.last = i;
+  }
+
+  // 손가락 하나만 받는다 (두 번째 손가락이 그리던 경로를 바꾸지 않게)
+  cv.addEventListener("pointerdown", function (e) {
+    if (!S) return;
+    e.preventDefault();
+    if (S.pid !== null) return;
+    var p = pointer(e);
+    if (S.mode === "loop") {
+      S.pid = e.pointerId;
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+      S.drawing = { path: [nearestVertex(p)], closed: false, blocked: false };
+      S.shown = -1;
+      setMsg("", "");
+      meter("drawing");
+      renderLog();
+    } else {
+      if (S.solved || S.gaveUp) { setMsg("정답을 확인한 뒤에는 표시를 바꿀 수 없습니다. 올가미는 계속 그려 볼 수 있습니다.", "주의"); return; }
+      var i = cellAt(p);
+      if (i < 0) return;
+      S.pid = e.pointerId;
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+      S.painting = { val: (S.marks[i] === S.tool && S.tool !== 0) ? 0 : S.tool, last: i };
+      paintCell(i);
+    }
+    render();
+  });
+  cv.addEventListener("pointermove", function (e) {
+    if (!S || e.pointerId !== S.pid) return;
+    var p = pointer(e);
+    if (S.drawing) {
+      stepToward(nearestVertex(p));
+      render();
+    } else if (S.painting) {
+      var i = cellAt(p);
+      if (i >= 0 && i !== S.painting.last) { paintTo(i); render(); }
+    }
+  });
+  function endPointer(e) {
+    if (!S || e.pointerId !== S.pid) return;
+    S.pid = null;
+    if (S.drawing) {
+      if (S.drawing.closed) {
+        finishLoop();
+        setMsg("", "");
+      } else {
+        if (S.drawing.path.length > 1) setMsg("올가미가 닫히지 않았습니다. 출발점인 검은 점까지 돌아와서 떼야 잽니다.", "주의");
+        meter(S.log.length ? S.log[S.log.length - 1].val : null);
+        if (S.log.length) S.shown = S.log.length - 1;
+      }
+      S.drawing = null;
+      renderLog();
+    }
+    S.painting = null;
+    render();
+  }
+  cv.addEventListener("pointerup", endPointer);
+  cv.addEventListener("pointercancel", function (e) {
+    if (!S || e.pointerId !== S.pid) return;
+    S.pid = null;                         // 취소된 손가락은 재지 않는다
+    S.drawing = null;
+    S.painting = null;
+    meter(S.log.length ? S.log[S.log.length - 1].val : null);
+    if (S.log.length) S.shown = S.log.length - 1;
+    renderLog();
+    render();
+  });
+
+  // ── 정답 확인 ──
+  $("submit").onclick = function () {
+    if (!S || S.solved || S.gaveUp) return;
+    var bad = P.countWrong(S.marks, S.board);
+    if (bad === 0) {
+      S.solved = true;
+      var k = P.starsFor(S.lv, S.probes);
+      var rec = loadRec(), old = rec[S.lv.id], saved = true;
+      if (!old || old.stars < k || (old.stars === k && S.probes < old.probes)) {
+        rec[S.lv.id] = { stars: k, probes: S.probes };
+        saved = saveRec(rec);
+      }
+      setMsg("정답입니다. <span style='color:" + C_ORANGE + ";letter-spacing:1px'>" + stars(k) + "</span> 올가미 " + S.probes + "번." +
+             (S.lv.showField ? "" : " 이제 자계가 보입니다.") +
+             (saved ? "" : " 이 기기에는 기록이 저장되지 않았습니다."), "좋음");
+      $("learned").hidden = false;
+      $("submit").disabled = true;
+      $("giveUp").hidden = true;
+      $("nextBtn").hidden = (S.idx >= P.LEVELS.length - 1);
+      if (S.idx >= P.LEVELS.length - 1) setMsg($("msg").innerHTML + " 마지막 단계입니다. 「단계 목록」의 「나의 기록 보기」에서 별을 모아 볼 수 있습니다.", "좋음");
+    } else {
+      S.wrong++;
+      S.probes += 2;
+      updateCount();
+      setMsg("틀린 칸이 " + bad + "개 있습니다. 올가미 2번으로 칩니다.", "주의");
+      if (S.wrong >= 2) $("giveUp").hidden = false;
+    }
+    render();
+  };
+  $("giveUp").onclick = function () {
+    if (!S || S.solved) return;
+    S.gaveUp = true;
+    var rec = loadRec();
+    if (!rec[S.lv.id]) { rec[S.lv.id] = { stars: 0, probes: S.probes }; saveRec(rec); }
+    setMsg("정답을 보여 드립니다. 점선 네모는 표시가 틀린 칸입니다. 「같은 단계 새 판」으로 다시 해 보세요.", "주의");
+    $("learned").hidden = false;
+    $("submit").disabled = true;
+    $("giveUp").hidden = true;
+    render();
+  };
+  $("nextBtn").onclick = function () { startLevel(S.idx + 1); };
+  $("newBoard").onclick = function () { startLevel(S.idx); };
+  $("toHome").onclick = function () { buildCards(); show("scr-home"); };
+  $("hintBtn").onclick = function () { $("hintBox").hidden = !$("hintBox").hidden; };
+  $("modeLoop").onclick = function () { setMode("loop"); };
+  $("modeMark").onclick = function () { setMode("mark"); };
+  $("toResult").onclick = buildResult;
+  $("backHome").onclick = function () { buildCards(); show("scr-home"); };
+
+  function renderLog() {
+    var ul = $("log");
+    ul.innerHTML = "";
+    if (!S.log.length) {
+      ul.innerHTML = "<li style='cursor:default;color:#999'>아직 없습니다</li>";
+      return;
+    }
+    for (var i = S.log.length - 1; i >= 0; i--) {
+      (function (i) {
+        var L = S.log[i], li = document.createElement("li");
+        li.innerHTML = "<span class='번호'>" + (i + 1) + "</span>" +
+                       "<span class='칸'>" + L.cells + "칸 감쌈</span>" +
+                       "<span class='돌기'>" + (L.ccw ? "반시계" : "시계") + "</span>" +
+                       (L.after ? "<span class='뒤'>풀이 뒤</span>" : "") +
+                       "<span class='값'>" + fmt(L.val) + "</span>";
+        if (i === S.shown) li.className = "고름";
+        li.onclick = function () { S.shown = i; meter(L.val); if ($("msg").className === "주의") setMsg("", ""); renderLog(); render(); };
+        ul.appendChild(li);
+      })(i);
+    }
+  }
+
+  // ── 그리기 ──
+  function drawOut(x, y, R, mag, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = "#fff";
+    ctx.lineWidth = mag > 1 ? 4.0 : 2.6;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, R * 0.28, 0, 2 * Math.PI); ctx.fill();
+  }
+  function drawIn(x, y, R, mag, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = "#fff";
+    ctx.lineWidth = mag > 1 ? 4.0 : 2.6;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    var d = R * 0.55;
+    ctx.lineWidth = mag > 1 ? 3.2 : 2.6;
+    ctx.beginPath();
+    ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d);
+    ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d);
+    ctx.stroke();
+  }
+  function drawCurrent(c, r, I, color) {
+    var x = sx(c + 0.5), y = sy(r + 0.5), mag = Math.abs(I);
+    var R = G.cell * (mag > 1 ? 0.27 : 0.21);
+    if (I > 0) drawOut(x, y, R, mag, color); else drawIn(x, y, R, mag, color);
+    if (mag > 1) {
+      ctx.fillStyle = color;
+      ctx.font = "bold " + Math.round(G.cell * 0.22) + "px sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillText(String(mag), x + R * 0.95, y + R * 1.25);
+    }
+  }
+  function arrow(x0, y0, x1, y1, color, lw, head) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var a = Math.atan2(y1 - y0, x1 - x0);
+    ctx.beginPath();
+    ctx.moveTo(x1 + head * 0.35 * Math.cos(a), y1 + head * 0.35 * Math.sin(a));
+    ctx.lineTo(x1 - head * Math.cos(a) + head * 0.5 * Math.sin(a), y1 - head * Math.sin(a) - head * 0.5 * Math.cos(a));
+    ctx.lineTo(x1 - head * Math.cos(a) - head * 0.5 * Math.sin(a), y1 - head * Math.sin(a) + head * 0.5 * Math.cos(a));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function render() {
+    if (!S) return;
+    var n = S.lv.n, W = G.W;
+    ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
+
+    var loop = null;
+    if (S.drawing) loop = { path: S.drawing.path, closed: S.drawing.closed };
+    else if (S.shown >= 0 && S.log[S.shown]) loop = { path: S.log[S.shown].path, closed: true };
+
+    updateMarkCount();
+
+    // 감싼 칸
+    if (loop && loop.closed) {
+      ctx.fillStyle = "#dcedf9";
+      P.enclosedCells(loop.path, n).forEach(function (q) {
+        ctx.fillRect(sx(q.c), sy(q.r + 1), G.cell, G.cell);
+      });
+    }
+
+    // 격자
+    ctx.strokeStyle = "#b9c1ca"; ctx.lineWidth = 1;
+    for (var k = 0; k <= n; k++) {
+      ctx.beginPath(); ctx.moveTo(sx(k), sy(0)); ctx.lineTo(sx(k), sy(n)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx(0), sy(k)); ctx.lineTo(sx(n), sy(k)); ctx.stroke();
+    }
+    ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(sx(0), sy(n), n * G.cell, n * G.cell);
+
+    var reveal = S.solved || S.gaveUp;
+
+    // 자계 화살표 (격자점마다). 판 밖 줄까지 더하므로 판마다 한 번만 계산해 둔다
+    if (S.lv.showField || reveal) {
+      if (!S.fieldCache) {
+        var HH = [], mx0 = 0;
+        for (var X = 0; X <= n; X++) for (var Y = 0; Y <= n; Y++) {
+          var h = P.fieldAt(X, Y, S.board.fieldWires), m = Math.hypot(h[0], h[1]);
+          HH.push([X, Y, h[0], h[1], m]);
+          if (m > mx0) mx0 = m;
+        }
+        S.fieldCache = { H: HH, hmax: mx0 };
+      }
+      var H = S.fieldCache.H, hmax = S.fieldCache.hmax;
+      var href = (S.lv.kind === "wires") ? 0.5 * hmax : hmax;
+      var Lmax = 0.56 * G.cell;
+      H.forEach(function (q) {
+        if (q[4] < (S.lv.kind === "wires" ? 0.04 : 0.06) * hmax) return;   // 줄 옆 잔물결(4 %)은 그리지 않는다
+        var L = Lmax * Math.min(1, q[4] / href);
+        var ux = q[2] / q[4], uy = q[3] / q[4];
+        var cx = sx(q[0]), cy = sy(q[1]);
+        // 화면 y 는 아래로 자라므로 성분 부호를 뒤집는다
+        arrow(cx - ux * L / 2, cy + uy * L / 2, cx + ux * L / 2, cy - uy * L / 2,
+              C_BLUE, 2.2, Math.max(6, G.cell * 0.10));
+      });
+    }
+
+    // 격자점
+    ctx.fillStyle = "#8e98a3";
+    for (var X2 = 0; X2 <= n; X2++) for (var Y2 = 0; Y2 <= n; Y2++) {
+      ctx.beginPath(); ctx.arc(sx(X2), sy(Y2), 2, 0, 2 * Math.PI); ctx.fill();
+    }
+
+    // 전류
+    if (reveal) {
+      S.board.wires.forEach(function (w) { drawCurrent(w.c, w.r, w.I, C_ORANGE); });
+      if (S.gaveUp) {
+        ctx.save();
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
+        for (var i = 0; i < S.marks.length; i++) {
+          var mk = S.marks[i] === 9 ? 0 : S.marks[i];
+          if (mk !== S.board.cells[i]) {
+            var c = i % n, r = Math.floor(i / n);
+            ctx.strokeRect(sx(c) + 4, sy(r + 1) + 4, G.cell - 8, G.cell - 8);
+          }
+        }
+        ctx.restore();
+      }
+    } else {
+      for (var j = 0; j < S.marks.length; j++) {
+        var v = S.marks[j], cc = j % n, rr = Math.floor(j / n);
+        if (v === 9) {
+          ctx.fillStyle = "#8c96a0";
+          ctx.beginPath(); ctx.arc(sx(cc + 0.5), sy(rr + 0.5), Math.max(3, G.cell * 0.05), 0, 2 * Math.PI); ctx.fill();
+        } else if (v !== 0) {
+          drawCurrent(cc, rr, v, C_ORANGE);
+        }
+      }
+    }
+
+    // 올가미
+    if (loop && loop.path.length) {
+      var pth = loop.path;
+      ctx.strokeStyle = "#111"; ctx.lineWidth = 3.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(sx(pth[0][0]), sy(pth[0][1]));
+      for (var a = 1; a < pth.length; a++) ctx.lineTo(sx(pth[a][0]), sy(pth[a][1]));
+      if (loop.closed) ctx.closePath();
+      ctx.stroke();
+      var segs = loop.closed ? pth.length : pth.length - 1;
+      for (var s = 0; s < segs; s++) {
+        var p0 = pth[s], p1 = pth[(s + 1) % pth.length];
+        var mx = (sx(p0[0]) + sx(p1[0])) / 2, my = (sy(p0[1]) + sy(p1[1])) / 2;
+        var dx = sx(p1[0]) - sx(p0[0]), dy = sy(p1[1]) - sy(p0[1]), dl = Math.hypot(dx, dy);
+        var hs = Math.max(6, G.cell * 0.11);
+        arrow(mx - dx / dl * hs * 0.2, my - dy / dl * hs * 0.2, mx + dx / dl * hs * 0.6, my + dy / dl * hs * 0.6, "#111", 0.1, hs);
+      }
+      ctx.fillStyle = "#111";
+      ctx.beginPath(); ctx.arc(sx(pth[0][0]), sy(pth[0][1]), loop.closed ? 4 : 6.5, 0, 2 * Math.PI); ctx.fill();
+    }
+  }
+
+  buildCards();
+})();
+</script>
+</body>
+</html>
