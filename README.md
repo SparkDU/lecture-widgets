@@ -11,6 +11,7 @@
 | [게임: 숨은 전류 찾기 (암페어 주회법칙)](https://sparkdu.github.io/lecture-widgets/em2-ampere-hunt.html) | 전자기학 2 |
 | [가는 파, 오는 파, 그 합](https://sparkdu.github.io/lecture-widgets/mw2-standing-wave.html) | 초고주파공학 2 |
 | [스미스 차트: 점을 찍으면 Γ, SWR, Zin 이 나온다](https://sparkdu.github.io/lecture-widgets/mw2-smith-chart.html) | 초고주파공학 2 |
+| [게임: 숨은 부하 탐정 (정재파와 스미스 차트)](https://sparkdu.github.io/lecture-widgets/mw2-load-detective.html) | 초고주파공학 2 |
 
 ---
 

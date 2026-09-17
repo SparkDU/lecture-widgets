@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>숨은 부하 탐정 · 초고주파공학 2</title>
+<!--
+  강의자 주석 (학생 화면에 안 나온다)
+  · 무엇: 4주차 2차시(09-24 목, 추석 휴강) 대체 온라인 게임. 무채점. 2주차 복습
+      정재파의 최대·최소(식 ①②) · SWR · 종단 3조건 · 스미스 차트 특별한 점 · 선로를 따라 돌기 · 최소점 = 왼쪽 교점
+      em2 「숨은 전류 찾기」(em2/game/em2-ampere-hunt.html)와 같은 틀: 단계 카드 · 안내/힌트/배운 것 · 결과 카드 · 탐침이 적을수록 별
+  · 관례 (docs/기호표.md, sim/스미스차트.py 와 같다): 시간규약 e^{+jωt}, 부하가 오른쪽 끝(z = 0),
+      부하에서 소스 쪽으로 잰 거리 ℓ = −z. Γ(ℓ) = Γ_L e^{−j2βℓ}, |V|/|V0+| = |1 + Γ(ℓ)|
+      최소점: Γ(ℓ) 의 각이 π → ℓ_min/λ = (θ_L − π)/(4π) mod 1/2
+  · 물리 판정은 아래 <script id="physics"> 한 블록. 검증 짝 = game/mw2-load-detective_검증.py
+    (node 로 이 블록을 돌려 sim/스미스차트.py 와 대조 · 극한 · 부하 생성 조건 · 별 기준 달성 가능성)
+  · 단계 (2026-09-17 재구성, 사용자 「원리를 탐구하게」): 1 종단 셋 · 2 순저항 (둘 다 추측 점선이 늘 보인다, 입문)
+      3 크기만 (최대·최소 → |Γ|, 차트에서 원의 반지름만) · 4 각만 (|Γ| 를 알려 주고 최소점 자리 → 각)
+      5 크기와 각 · 6 실제 길이 1 GHz mm · 7 순리액턴스, 탐침 두 번 (점선 보임, 자리 고르기가 관건)
+      8 전압 0 자리 찾기 (거꾸로, 2026-09-18 추가): 순리액턴스 Z_L 을 알려 주고, 차트에 z_L 을 찍어 부하 쪽 눈금을 읽고
+        그 자리를 재어 |V| ≤ 0.15 (최소점에서 약 ±0.012λ) 면 성공. 제출 단추 없음. 읽기 칸의 「최소점」은 숨긴다
+        (부하 쪽 눈금 = 최소점 ℓ/λ 는 4단계에서 보인 관계를 학생이 쓰게). 4단계(최소점 → 부하)와 짝
+      3~6단계 점선은 「정답 확인」 뒤에만 (그 추측의 무늬, 3단계는 최대·최소 두 줄)
+  · 차트 바깥 파장 눈금 (사용자 2026-09-18, 종이 차트의 toward generator / toward load):
+      바깥 줄 = 소스 쪽으로 (시계), 안 줄 = 부하 쪽으로 (반시계), 둘 다 왼쪽 끝이 0, 한 바퀴 0.5λ
+      소스 쪽 = (180° − θ)/720° mod 0.5 · 부하 쪽 = (θ − 180°)/720° mod 0.5 = 최소점 ℓ/λ (같은 수)
+      4단계는 각을 계산하는 대신 눈금으로 읽어도 된다 (종이 차트의 정석 풀이). 근거 판정이 최소점 탐침을 요구한다
+  · 탐침 상한 cap: 1, 2단계 5번, 3~6단계 = 별 둘 상한, 7단계 2번. 맞힌 뒤에는 세지 않고 더 잴 수 있다
+  · 근거 있는 답 (Codex 3차 리뷰: 한 번 재고 크기만 0.3, 0.4 … 로 제출해 별 셋이 나왔다):
+      별 둘 이상은 evidence() 가 참일 때만. 3~6단계 = 최소점이나 최대점에서 0.03λ 안을 잰 탐침이 있다
+      1, 2, 7단계 = 잰 값(±0.006)과 맞는 후보가 정답 근처(허용치 안)에만 남는다
+  · 7단계를 맞히거나 정답을 보면 차트에 탐침 원: |V(ℓ)| = |Γ_L − (−e^{+j2βℓ})|
+      (탐침 하나 = 기준점 −e^{j2βℓ} 을 중심으로 반지름 |V| 인 원. 기준점은 ℓ = 0 에서 단락 점, ℓ 이 늘면 반시계)
+      🔴 이 기하 해석은 2주차 슬라이드에 없다. 7단계 「배운 것」에서만 짧게 말한다
+  · 별 기준 (탐침 수, 틀린 제출은 2번으로 침) = em2 게임과 같은 규칙:
+      별 셋 = 풀이기 탐침 수 × 1.4 올림, 별 둘 = 그 + 3. 검증 스크립트가 규칙과 달성률을 다시 잰다
+      1·2단계 풀이기 1번 → 2 · 7단계 2번 (ℓ = 0, λ/8, |Γ| = 1 을 앎) → 3
+      3~6단계 = 최소점 찾기 (λ/2 를 0.1λ 로 5번 훑고 가장 낮은 자리 양옆을 k 번 좁힘): 3단계 k=1 → 7번 (정답 95 %) → 10 · 4~6단계 k=2 → 9번 (정답 96~98 %) → 13
+  · 정답 판정: 차트 거리 |Γ_추측 − Γ_L| ≤ 0.1 · 3단계는 크기 차이 ≤ 0.05 · 1단계는 세 점 중 정확히 하나
+  · 6단계 λ: c = 3×10^8 m/s, 1 GHz → 300 mm. 근거 = 2주차 「전송선이란」 장의 예 (1 GHz 에서 3 cm = 0.1λ)
+  · 슬러그 mw2-load-detective — LMS 링크가 가리킨다. 바꾸지 마라
+  · 뺀 것 (mw2 닫힌 결정): 위상속도·군속도·분산 · 정합회로(5주차) · 손실
+-->
+<style>
+  :root { color-scheme: light;
+    --남색: #0b3050; --파랑: #0072B2; --주황: #E69F00; --하늘: #56B4E9;
+    --회색: #777777; --옅은: #f3f6f9; --선: #d8dde3; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    word-break: keep-all; line-height: 1.55;
+  }
+  math { font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", math; }
+  header, main, footer { max-width: 560px; margin-left: auto; margin-right: auto; }
+  header { margin-bottom: 0.8rem; }
+  h1 { font-size: 1.3rem; line-height: 1.35; margin: 0 0 0.1rem; color: var(--남색); }
+  h2 { font-size: 1.05rem; margin: 1.1rem 0 0.45rem; color: var(--남색); }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  ul { margin: 0.2rem 0 0.4rem; padding-left: 1.2rem; }
+  li { margin: 0.18rem 0; }
+  p { margin: 0.35rem 0; }
+  button {
+    font: inherit; font-size: 0.92rem; border-radius: 8px; cursor: pointer;
+    min-height: 42px; padding: 0.35rem 0.8rem;
+    border: 1.5px solid var(--파랑); background: #fff; color: var(--파랑);
+  }
+  button.주 { background: var(--남색); border-color: var(--남색); color: #fff; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .줄 { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.5rem 0; }
+  .상자 { background: var(--옅은); border-left: 4px solid var(--파랑);
+          padding: 0.55rem 0.8rem; border-radius: 4px; margin: 0.6rem 0; }
+  .상자.핵심 { border-left-color: var(--주황); background: #fdf7e7; }
+
+  /* 범례 아이콘: 글꼴에 기대지 않고 그림으로 */
+  .ic { display: inline-block; width: 1.9em; height: 1em; vertical-align: -0.12em;
+        background-size: contain; background-repeat: no-repeat; background-position: center; }
+  .ic.probe { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 20'><circle cx='19' cy='10' r='6' fill='%230072B2' stroke='black' stroke-width='1.2'/></svg>"); }
+  .ic.guess { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 20'><path d='M2 10 H13 M19 10 H30' stroke='%23E69F00' stroke-width='3'/><circle cx='34' cy='10' r='3.5' fill='%23E69F00' stroke='black' stroke-width='1'/></svg>"); }
+  .ic.truth { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 20'><path d='M2 10 H28' stroke='black' stroke-width='2.4'/><path d='M34 4 L39 10 L34 16 L29 10 Z' fill='%230072B2' stroke='black' stroke-width='1'/></svg>"); }
+
+  /* 단계 목록 */
+  .단계들 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .단계 { text-align: left; padding: 0.55rem 0.7rem; min-height: 78px;
+          border: 1.5px solid var(--선); color: #333; }
+  .단계 b { color: var(--남색); display: block; }
+  .단계 .별 { color: var(--주황); letter-spacing: 1px; }
+  .단계 .작게 { font-size: 0.78rem; color: var(--회색); }
+
+  /* 놀이 화면 */
+  .머리 { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .세기 { font-size: 0.86rem; color: var(--회색); text-align: right; }
+  .세기 b { color: var(--남색); font-size: 1.05rem; }
+  .판틀 { position: relative; }
+  canvas { display: block; margin: 0 auto; max-width: 100%; -webkit-user-select: none; user-select: none; }
+  .왼판, .오른판 { min-width: 0; }
+  #lineCv { touch-action: pan-y; }
+  #smithCv { touch-action: none; }
+  .범례 { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2rem 0.9rem;
+          font-size: 0.8rem; color: #555; margin: 0.2rem 0; }
+  .계기 { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.3rem 1.2rem;
+          border: 2px solid var(--남색); border-radius: 10px; padding: 0.3rem 0.6rem;
+          margin: 0.45rem 0 0.7rem; background: #fff; min-height: 50px;
+          font-variant-numeric: tabular-nums; }
+  .계기 math { font-size: 1.2rem; }
+  .대기 { font-size: 0.92rem; color: var(--회색); }
+  .읽기 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.6rem;
+          border: 1.5px solid var(--주황); border-radius: 10px; padding: 0.4rem 0.7rem;
+          margin: 0.45rem 0; background: #fffdf7; min-height: 50px; }
+  .읽기 > div { white-space: nowrap; }
+  .읽기 math { font-size: 1.08rem; }
+  .읽기 .한줄 { grid-column: 1 / -1; text-align: center; white-space: normal; }
+  #msg { min-height: 1.6em; font-size: 0.95rem; }
+  #msg.좋음 { color: var(--남색); font-weight: bold; }
+  #msg.주의 { color: #8a5a00; }
+  .기록 { list-style: none; padding: 0; margin: 0.3rem 0; font-size: 0.9rem; }
+  .기록 li { display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0.4rem;
+             border-bottom: 1px solid #eee; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .기록 li.고름 { background: #e6f2fb; }
+  .기록 .번호 { width: 2.2em; color: var(--회색); }
+  .기록 .값 { margin-left: auto; font-weight: bold; color: var(--남색); }
+
+  /* 결과 카드 */
+  .카드 { border: 2px solid var(--남색); border-radius: 12px; padding: 0.9rem 1rem; }
+  .카드 table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+  .카드 td { padding: 0.3rem 0.2rem; border-bottom: 1px solid #eee; }
+  .카드 td.별 { color: var(--주황); letter-spacing: 1px; white-space: nowrap; }
+  .카드 td.수 { text-align: right; color: var(--회색); white-space: nowrap; }
+  .합계 { font-size: 1.15rem; font-weight: bold; color: var(--남색); margin-top: 0.5rem; }
+
+  footer {
+    margin-top: 2rem; padding-top: 0.8rem; border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+  [hidden] { display: none !important; }
+
+  /* 넓은 화면의 놀이 화면: 그래프와 차트를 나란히 (차트를 끄는 동안 그래프가 보이게) */
+  @media (min-width: 900px) {
+    body:has(#scr-play:not([hidden])) header,
+    body:has(#scr-play:not([hidden])) main,
+    body:has(#scr-play:not([hidden])) footer { max-width: 1040px; }
+    .판들 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>숨은 부하 탐정</h1>
+<div class="과목">초고주파공학 2 · 전송선과 스미스 차트</div>
+</header>
+
+<main>
+<!-- ═══════════ 첫 화면 ═══════════ -->
+<section id="scr-home">
+  <div class="상자 핵심">
+    <p>선로 끝 상자에 부하가 숨어 있습니다.
+    선로 위의 전압을 재서 정재파 무늬를 읽고, 스미스 차트에 그 부하를 찍어 맞히세요.</p>
+  </div>
+
+  <h2>하는 법</h2>
+  <ul>
+    <li>게임 화면에서 선로를 누르면 그 자리의 전압 크기가 그래프에 점으로 찍힙니다. 이 게임에서는 <b>탐침</b>이라고 부릅니다.
+      손가락이나 마우스로 누른 채 끌어 자리를 고르고, 떼면 잽니다.</li>
+    <li>그래프의 세로축은
+      <math><mrow><mo lspace="0" rspace="0">|</mo><mi>V</mi><mo lspace="0" rspace="0">|</mo><mo>/</mo><mo lspace="0" rspace="0">|</mo><msubsup><mi>V</mi><mn>0</mn><mo>+</mo></msubsup><mo lspace="0" rspace="0">|</mo></mrow></math>
+      입니다. 입사파의 크기
+      <math><mrow><mo lspace="0" rspace="0">|</mo><msubsup><mi>V</mi><mn>0</mn><mo>+</mo></msubsup><mo lspace="0" rspace="0">|</mo></mrow></math>
+      를 1 로 두므로, 이 게임에서 보이는
+      <math><mrow><mo lspace="0" rspace="0">|</mo><mi>V</mi><mo lspace="0" rspace="0">|</mo></mrow></math>
+      는 그 몇 배인지를 뜻합니다. 반사가 없으면 어디서나 1 입니다.</li>
+    <li>게임 화면의 스미스 차트를 누르거나 끌어 부하의 반사계수
+      <math><msub><mi mathvariant="normal">Γ</mi><mi>L</mi></msub></math>
+      를 추측하세요. 3단계는 크기만, 4단계는 각만 고릅니다.</li>
+    <li>차트 바깥의 두 눈금은 거리를 파장 단위로 보여 줍니다. 바깥 줄은 소스 쪽으로 시계 방향, 안 줄은 부하 쪽으로 반시계 방향이며 둘 다 왼쪽 끝이 0 입니다.</li>
+    <li>주황 점선은 추측한 부하의 무늬입니다. 1, 2, 7단계는 늘 보이고, 3~6단계는 「정답 확인」을 누른 뒤에 보입니다.</li>
+    <li>8단계는 거꾸로입니다. 부하 값을 알려 드리니, 차트로 전압이 0 이 되는 자리를 찾아 그곳을 재세요.</li>
+    <li>단계마다 탐침을 쓸 수 있는 횟수가 정해져 있습니다. 어디를 잴지 먼저 생각해 보세요.</li>
+    <li>선로의 특성임피던스는
+      <math><msub><mi>Z</mi><mn>0</mn></msub><mo>=</mo><mn>50</mn><mtext>&#8201;Ω</mtext></math>
+      입니다.</li>
+    <li>「정답 확인」을 누르세요. 탐침을 적게 쓸수록 별이 많습니다. 틀린 제출은 탐침 2번으로 칩니다.</li>
+    <li>맞혀도 잰 값이 그 답을 뒷받침하지 못하면 별은 하나입니다. 짐작이 아니라 잰 값으로 답을 정하세요.</li>
+    <li>점수는 어디로도 보내지 않습니다. 몇 번이든 해 보세요.</li>
+  </ul>
+
+  <h2>단계</h2>
+  <div class="단계들" id="levelCards"></div>
+  <div class="줄"><button id="toResult">나의 기록 보기</button></div>
+</section>
+
+<!-- ═══════════ 놀이 화면 ═══════════ -->
+<section id="scr-play" hidden>
+  <div class="머리">
+    <h2 id="lvTitle" style="margin:0.2rem 0">단계</h2>
+    <div class="세기">탐침 <b id="probeCount">0</b>번<br><span id="remain"></span><br><span id="goal"></span></div>
+  </div>
+  <div class="상자" id="lvInfo"></div>
+
+  <div class="판들">
+  <div class="왼판">
+  <div class="판틀"><canvas id="lineCv" aria-label="선로와 전압 그래프"></canvas></div>
+  <div class="범례">
+    <span><i class="ic probe"></i> 탐침</span>
+    <span id="lgGuess"><i class="ic guess"></i> <span id="lgGuessText">추측한 부하</span></span>
+    <span id="lgTruth" hidden><i class="ic truth"></i> 정답</span>
+  </div>
+  <div class="계기" id="probeRead" aria-live="polite"><span class="대기">선로를 눌러 재 보세요</span></div>
+  </div>
+  <div class="오른판">
+  <div class="판틀"><canvas id="smithCv" data-maxw="330" data-maxw-wide="420" aria-label="스미스 차트"></canvas></div>
+  <div class="범례">
+    <span><b style="color:#0b3050">바깥 남색 눈금</b>: 소스 쪽으로, 시계 방향</span>
+    <span><b style="color:#555">안쪽 회색 눈금</b>: 부하 쪽으로, 반시계 방향</span>
+    <span>눈금 단위는 파장, 한 바퀴가 0.5 파장입니다</span>
+  </div>
+  <div class="읽기" id="guessRead" aria-live="polite"></div>
+  </div>
+  </div>
+
+  <p id="msg"></p>
+
+  <div class="줄">
+    <button id="submit" class="주">정답 확인</button>
+    <button id="hintBtn">힌트</button>
+    <button id="giveUp" hidden>정답 보기</button>
+    <button id="nextBtn" class="주" hidden>다음 단계</button>
+  </div>
+  <div class="상자" id="hintBox" hidden></div>
+  <div class="상자 핵심" id="learned" hidden></div>
+
+  <h2>탐침 기록</h2>
+  <ul class="기록" id="log"></ul>
+
+  <div class="줄">
+    <button id="newBoard">같은 단계 새 부하</button>
+    <button id="toHome">단계 목록</button>
+  </div>
+</section>
+
+<!-- ═══════════ 결과 화면 ═══════════ -->
+<section id="scr-result" hidden>
+  <div class="카드">
+    <div style="font-size:1.1rem;font-weight:bold;color:var(--남색)">숨은 부하 탐정 · 나의 기록</div>
+    <div style="font-size:0.85rem;color:#777">초고주파공학 2 · <span id="today"></span></div>
+    <table id="recTable"></table>
+    <div class="합계" id="recTotal"></div>
+    <p id="recWord" style="margin-top:0.4rem"></p>
+  </div>
+  <div class="줄"><button id="backHome" class="주">단계 목록으로</button></div>
+</section>
+</main>
+
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     물리 판정 — 화면과 무관한 순수 함수만. 검증 스크립트가 node 로 이 블록을 돌린다.
+     복소수 = {re, im}. 거리는 λ 단위 (lLam = ℓ/λ). 5단계 mm 는 화면 쪽에서 바꾼다.
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="physics">
+var PHYS = (function () {
+  "use strict";
+  var PI = Math.PI;
+  var Z0 = 50;          // 선로 특성임피던스 [Ω]
+  var C0 = 3e8;         // 빛의 속도 [m/s] (6단계 λ = c/f)
+
+  function cx(re, im) { return { re: re, im: im || 0 }; }
+  function add(a, b) { return cx(a.re + b.re, a.im + b.im); }
+  function sub(a, b) { return cx(a.re - b.re, a.im - b.im); }
+  function mul(a, b) { return cx(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re); }
+  function div(a, b) {
+    var d = b.re * b.re + b.im * b.im;
+    return cx((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
+  }
+  function abs(a) { return Math.hypot(a.re, a.im); }
+  function arg(a) { return Math.atan2(a.im, a.re); }
+  function polar(m, t) { return cx(m * Math.cos(t), m * Math.sin(t)); }
+  function mod(a, n) { return ((a % n) + n) % n; }
+
+  // 식 ②  Γ_L = (Z_L − Z_0)/(Z_L + Z_0).  load.open 이면 개방 → Γ_L = 1
+  function gammaL(load) {
+    if (load.open) return cx(1, 0);
+    var z = cx(load.R, load.X);
+    return div(sub(z, cx(Z0, 0)), add(z, cx(Z0, 0)));
+  }
+  // 부하에서 ℓ 만큼 소스 쪽: Γ(ℓ) = Γ_L e^{−j2βℓ},  2βℓ = 4π ℓ/λ
+  function gammaAt(g, lLam) { return mul(g, polar(1, -4 * PI * lLam)); }
+  // 식 ①에 식 ②:  |V(ℓ)|/|V0+| = |1 + Γ(ℓ)|
+  function vmag(g, lLam) { return abs(add(cx(1, 0), gammaAt(g, lLam))); }
+  // SWR = (1 + |Γ|)/(1 − |Γ|)
+  function swr(g) { var m = abs(g); return m >= 1 - 1e-9 ? Infinity : (1 + m) / (1 - m); }   // 바깥 원은 반올림 오차로 1 을 살짝 밑돈다
+  // z = (1 + Γ)/(1 − Γ).  Γ = 1 (개방) 이면 null
+  function zFromGamma(g) {
+    var d = sub(cx(1, 0), g);
+    if (abs(d) < 1e-12) return null;
+    return div(add(cx(1, 0), g), d);
+  }
+  // 최소점: Γ(ℓ) 의 각이 π 인 자리.  ℓ/λ = (θ_L − π)/(4π)  (λ/2 마다 반복, [0, 1/2) 로)
+  function minPos(g) {
+    if (abs(g) < 1e-12) return null;
+    var v = mod((arg(g) - PI) / (4 * PI), 0.5);
+    return v > 0.5 - 1e-12 ? 0 : v;
+  }
+  // 최대점: Γ(ℓ) 의 각이 0 인 자리
+  function maxPos(g) {
+    if (abs(g) < 1e-12) return null;
+    var v = mod(arg(g) / (4 * PI), 0.5);
+    return v > 0.5 - 1e-12 ? 0 : v;
+  }
+
+  // 단계 정의. stars = [별 셋 상한, 별 둘 상한] (탐침 수, 틀린 제출 = 2) · cap = 탐침 상한
+  //   len = 선로 길이 [λ] · unit = 탐침 자리 표시 · step = 탐침 자리 간격 [λ] (mm 단계는 1 mm)
+  //   overlay: live = 추측 무늬가 늘 보임 · after = 제출한 추측의 무늬만 보임
+  //   snap: three · real · radius(크기만) · ring(크기를 알려 주고 각만) · free · rim(바깥 원)
+  var LEVELS = [
+    { id: 1, name: "개방, 단락, 정합", len: 1,   unit: "lam", step: 0.005, overlay: "live",  snap: "three",  tol: 0,    cap: 5,  stars: [2, 5] },
+    { id: 2, name: "저항 하나",        len: 1,   unit: "lam", step: 0.005, overlay: "live",  snap: "real",   tol: 0.1,  cap: 5,  stars: [2, 5] },
+    { id: 3, name: "크기만",           len: 1,   unit: "lam", step: 0.005, overlay: "after", snap: "radius", tol: 0.05, cap: 13, stars: [10, 13] },
+    { id: 4, name: "각만",             len: 1,   unit: "lam", step: 0.005, overlay: "after", snap: "ring",   tol: 0.1,  cap: 16, stars: [13, 16] },
+    { id: 5, name: "크기와 각",        len: 1,   unit: "lam", step: 0.005, overlay: "after", snap: "free",   tol: 0.1,  cap: 16, stars: [13, 16] },
+    { id: 6, name: "실제 길이",        len: 1.5, unit: "mm",  f: 1e9,     overlay: "after", snap: "free",   tol: 0.1,  cap: 16, stars: [13, 16] },
+    { id: 7, name: "리액턴스, 탐침 두 번", len: 1, unit: "lam", step: 0.005, overlay: "live", snap: "rim",  tol: 0.1,  cap: 2,  stars: [3, 6], circles: true },
+    { id: 8, name: "전압 0 자리 찾기", len: 1,   unit: "lam", step: 0.005, overlay: "none",  snap: "rim",    tol: 0.1,  cap: 5,  stars: [2, 5], nullHunt: true, tolV: 0.15 }
+  ];
+  function level(id) { for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) return LEVELS[i]; return null; }
+  // 5단계 파장 [mm]
+  function lamMM(lv) { return lv.f ? C0 / lv.f * 1000 : null; }
+
+  // 탐침 자리 맞춤 (λ 단위로 돌려준다)
+  function snapPos(lv, lLam) {
+    var l = Math.max(0, Math.min(lv.len, lLam));
+    if (lv.unit === "mm") { var lm = lamMM(lv); return Math.round(l * lm) / lm; }
+    var n = Math.round(l / lv.step);
+    return Math.round(n * lv.step * 1e6) / 1e6;
+  }
+
+  // 차트에서 누른 자리 (gx, gy) → 추측. 크기 0.01 · 각 1° 로 맞춘 뒤 그 값으로만 계산한다
+  function mk(mag, deg) {
+    deg = deg + 0;
+    var g = polar(mag, deg * PI / 180);
+    if (Math.abs(g.re) < 1e-12) g.re = 0;
+    if (Math.abs(g.im) < 1e-12) g.im = 0;
+    return { mag: mag, deg: deg, g: g };
+  }
+  // 4단계에서 알려 주는 크기 (0.01 눈금)
+  function ringMag(truth) { return Math.round(abs(truth) * 100) / 100; }
+  function snapGuess(lv, gx, gy, ring) {
+    if (lv.snap === "three") {
+      var cands = [-1, 0, 1], best = 0, bd = Infinity;
+      for (var i = 0; i < cands.length; i++) {
+        var d = Math.hypot(gx - cands[i], gy);
+        if (d < bd) { bd = d; best = cands[i]; }
+      }
+      return mk(Math.abs(best), best < 0 ? 180 : 0);
+    }
+    if (lv.snap === "real") {
+      var r = Math.round(Math.max(-1, Math.min(1, gx)) * 100) / 100;
+      return mk(Math.abs(r), r < 0 ? 180 : 0);
+    }
+    var m = lv.snap === "rim" ? 1 : lv.snap === "ring" ? ring : Math.min(1, Math.round(Math.hypot(gx, gy) * 100) / 100);
+    var deg = Math.round(Math.atan2(gy, gx) * 180 / PI);
+    if (deg <= -180) deg += 360;              // (−180°, 180°]
+    if (m === 0) deg = 0;
+    return mk(m, deg);
+  }
+
+  // 판정. kind: ok · shallow(크기가 작다) · deep(크기가 크다) · angle(각이 다르다) · wrong(1단계)
+  function judge(lv, guess, truth) {
+    var err = abs(sub(guess.g, truth));
+    if (lv.snap === "three") return { ok: err < 1e-9, err: err, kind: err < 1e-9 ? "ok" : "wrong" };
+    var dm = guess.mag - abs(truth);
+    if (lv.snap === "radius") {               // 크기만 본다
+      if (Math.abs(dm) <= lv.tol + 1e-12) return { ok: true, err: Math.abs(dm), kind: "ok" };
+      return { ok: false, err: Math.abs(dm), kind: dm < 0 ? "shallow" : "deep" };
+    }
+    if (err <= lv.tol + 1e-12) return { ok: true, err: err, kind: "ok" };
+    if (lv.snap !== "ring" && lv.snap !== "rim" && Math.abs(dm) > lv.tol * 0.7) return { ok: false, err: err, kind: dm < 0 ? "shallow" : "deep" };
+    return { ok: false, err: err, kind: "angle" };
+  }
+
+  // 근거 있는 답인가 (별 둘 이상의 조건). 잰 값이 답을 정할 만했는지 본다
+  //   1·2·7단계: 잰 값(화면 소수 둘째 자리 ≈ ±0.006)과 맞는 후보가 정답 근처에만 남는다
+  //   3~6단계: 가장 낮은 곳이나 가장 높은 곳에서 0.03λ 안을 잰 탐침이 있다 (2주차에서 배운 풀이의 흔적)
+  var EVID_L = 0.03, EVID_V = 0.006;
+  function circDist(a, b) { var d = mod(a - b, 0.5); return Math.min(d, 0.5 - d); }
+  function evidence(lv, probes, truth) {
+    if (!probes.length) return false;
+    var cands = [], i;
+    if (lv.snap === "three") cands = [cx(1, 0), cx(-1, 0), cx(0, 0)];
+    else if (lv.snap === "real") { for (i = -500; i <= 500; i++) cands.push(cx(i / 500, 0)); }
+    else if (lv.snap === "rim") { for (i = 0; i < 3600; i++) cands.push(polar(1, i * PI / 1800)); }
+    else {
+      var lm = minPos(truth), lx = maxPos(truth);
+      return probes.some(function (p) { return circDist(p.l, lm) <= EVID_L || circDist(p.l, lx) <= EVID_L; });
+    }
+    for (i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      var fits = probes.every(function (p) { return Math.abs(vmag(c, p.l) - p.v) <= EVID_V; });
+      if (fits && abs(sub(c, truth)) > lv.tol + 1e-9) return false;     // 정답에서 먼 후보가 남는다
+    }
+    return true;
+  }
+
+  // 8단계: 잰 전압이 0 에 충분히 가까운가
+  function nullHit(lv, v) { return !!lv.nullHunt && v <= lv.tolV + 1e-12; }
+
+  // 차트 바깥 파장 눈금: 왼쪽 끝(각 180°)이 0, 소스 쪽은 시계, 부하 쪽은 반시계로 늘어난다. 한 바퀴 0.5λ
+  function rimScale(deg) {
+    var src = mod((180 - deg) / 720, 0.5), load = mod((deg - 180) / 720, 0.5);
+    if (src > 0.5 - 1e-12) src = 0;
+    if (load > 0.5 - 1e-12) load = 0;
+    return { src: src, load: load };
+  }
+
+  // 탐침 원: |V(ℓ)| = |Γ_L − c|,  c = −e^{+j2βℓ} (ℓ = 0 에서 단락 점, ℓ 이 늘면 반시계)
+  function probeCircle(lLam, v) { return { c: polar(-1, 4 * PI * lLam), r: v }; }
+
+  function starsFor(lv, probes) {
+    if (probes <= lv.stars[0]) return 3;
+    if (probes <= lv.stars[1]) return 2;
+    return 1;
+  }
+
+  // 숨은 부하 만들기. rnd() ∈ [0, 1)
+  var R2 = [10, 12.5, 25, 75, 100, 150, 200, 250];          // 2단계: Γ = ∓0.67 ∓0.6 −0.33 0.2 0.33 0.5 0.6 0.67
+  function makeLoad(id, rnd) {
+    function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+    var k, load, g, t;
+    if (id === 1) {
+      k = pick(["open", "short", "match"]);
+      if (k === "open") return { open: true, R: Infinity, X: 0, kind: k };
+      return { open: false, R: k === "short" ? 0 : Z0, X: 0, kind: k };
+    }
+    if (id === 2) return { open: false, R: pick(R2), X: 0, kind: "R" };
+    if (id === 7 || id === 8) {
+      for (k = 0; k < 1000; k++) {
+        load = { open: false, R: 0, X: (rnd() < 0.5 ? -1 : 1) * 5 * (1 + Math.floor(rnd() * 30)), kind: "X" };
+        t = Math.abs(arg(gammaL(load))) * 180 / PI;
+        if (t >= 25 && t <= 155) return load;
+      }
+    }
+    for (k = 0; k < 1000; k++) {                             // 3~6단계
+      var X = 10 * (1 + Math.floor(rnd() * 8));
+      load = { open: false, R: 10 + 5 * Math.floor(rnd() * 19), X: rnd() < 0.5 ? -X : X, kind: "RX" };
+      g = abs(gammaL(load));
+      if (g >= 0.3 && g <= 0.75) return load;
+    }
+    return { open: false, R: 30, X: -40, kind: "RX" };
+  }
+
+  // 결정적 난수 (검증용)
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  return {
+    Z0: Z0, C0: C0, cx: cx, abs: abs, arg: arg, polar: polar, sub: sub,
+    gammaL: gammaL, gammaAt: gammaAt, vmag: vmag, swr: swr, zFromGamma: zFromGamma,
+    minPos: minPos, maxPos: maxPos, LEVELS: LEVELS, level: level, lamMM: lamMM,
+    snapPos: snapPos, snapGuess: snapGuess, judge: judge, starsFor: starsFor, ringMag: ringMag, probeCircle: probeCircle, evidence: evidence, circDist: circDist, rimScale: rimScale, nullHit: nullHit,
+    makeLoad: makeLoad, mulberry32: mulberry32
+  };
+})();
+if (typeof module !== "undefined" && module.exports) { module.exports = PHYS; }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     화면 · 조작
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  "use strict";
+  var P = PHYS;
+  var $ = function (id) { return document.getElementById(id); };
+  var BLUE = "#0072B2", ORANGE = "#E69F00", NAVY = "#0b3050", SKY = "#56B4E9";
+  var MINUS = "−";
+  var SANS = '"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif';
+  var SERIF = '"Times New Roman","Cambria Math",Times,serif';
+  var STORE = "mw2-load-detective-v2";                 // v2 = 7단계 구성 (2026-09-18). v1 기록은 단계 번호가 달라 읽지 않는다
+
+  // ── MathML 조각 ──
+  var M = {
+    GL: '<msub><mi mathvariant="normal">Γ</mi><mi>L</mi></msub>',
+    aG: '<mrow><mo lspace="0" rspace="0">|</mo><mi mathvariant="normal">Γ</mi><mo lspace="0" rspace="0">|</mo></mrow>',
+    aGL: '<mrow><mo lspace="0" rspace="0">|</mo><msub><mi mathvariant="normal">Γ</mi><mi>L</mi></msub><mo lspace="0" rspace="0">|</mo></mrow>',
+    zL: '<msub><mi>z</mi><mi>L</mi></msub>',
+    ZL: '<msub><mi>Z</mi><mi>L</mi></msub>',
+    Z0: '<msub><mi>Z</mi><mn>0</mn></msub>',
+    V: '<mrow><mo lspace="0" rspace="0">|</mo><mi>V</mi><mo lspace="0" rspace="0">|</mo></mrow>',
+    ell: '<mi>ℓ</mi>',
+    lam: '<mi>λ</mi>'
+  };
+  function mm(s) { return "<math>" + s + "</math>"; }
+  function mn(s) { return "<mn>" + s + "</mn>"; }
+  function mo(s) { return "<mo>" + s + "</mo>"; }
+
+  function xOhm(x, d) {
+    var s = d === undefined ? (Math.round(Math.abs(x) * 10) / 10).toString() : Math.abs(x).toFixed(d);
+    return (x < 0 ? mo(MINUS) : "") + "<mi>j</mi>" + mn(s);
+  }
+
+  // 단계별 안내문 (학생에게 보인다). info 는 함수일 수 있다 (4단계는 크기를 알려 준다)
+  var BAR = '<mo lspace="0" rspace="0">|</mo>';
+  var TWO_BL = mm("<mn>2</mn><mi>β</mi><mi>ℓ</mi>" + mo("=") + "<mn>720</mn><mo>°</mo>" + mo("×") + "<mfrac><mi>ℓ</mi><mi>λ</mi></mfrac>");
+  var TEXT = {
+    1: {
+      info: "<ul><li>숨은 부하는 <b>개방, 단락, 정합</b> 중 하나입니다. 탐침은 세 번까지 쓸 수 있습니다.</li>" +
+            "<li>선로를 눌러 전압을 재고, 차트의 세 점 중 하나를 고르세요. 고른 부하의 무늬가 주황 점선으로 겹쳐집니다.</li></ul>",
+      hint: "<ul><li>2주차 「세 조건의 정재파」: 개방은 부하에서 최대점, 단락은 부하에서 최소점입니다.</li>" +
+            "<li>선로 오른쪽 끝, 부하 바로 앞을 재 보세요.</li></ul>",
+      learned: "<ul><li>부하 자리의 전압은 개방 2, 단락 0, 정합 1 입니다. 한 번만 재면 셋이 갈립니다.</li>" +
+               "<li>정합이면 무늬가 평평합니다. 되돌아오는 파가 없기 때문입니다.</li>" +
+               "<li>차트에서 개방은 오른쪽 끝, 단락은 왼쪽 끝, 정합은 가운데입니다.</li></ul>"
+    },
+    2: {
+      info: "<ul><li>숨은 부하는 <b>저항 하나</b>입니다. 탐침은 세 번까지 쓸 수 있습니다.</li>" +
+            "<li>차트에서는 가로축 위만 고를 수 있습니다.</li></ul>",
+      hint: "<ul><li>2주차 「특별한 점 셋과 두 반원」: 차트의 가로축이 순저항입니다.</li>" +
+            "<li>부하 자리에서 재면 " + mm(M.V + mo("=") + BAR + mn("1") + mo("+") + M.GL + BAR) + " 입니다. " +
+            mm(M.GL) + " 가 실수면 절댓값을 떼어도 됩니다.</li></ul>",
+      learned: "<ul><li>" + mm(M.GL) + " 가 실수면 부하 자리의 전압이 곧 " + mm(mn("1") + mo("+") + M.GL) + " 입니다.</li>" +
+               "<li>저항이 " + mm(M.Z0) + " 보다 크면 부하에서 최대, 작으면 부하에서 최소입니다.</li>" +
+               "<li>최대와 최소의 차이는 저항이 " + mm(M.Z0) + " 의 몇 배인지로 정해집니다. 25 Ω 과 100 Ω 은 둘 다 두 배 차이라 SWR 이 같습니다.</li></ul>"
+    },
+    3: {
+      info: "<ul><li>이번 부하에는 저항과 리액턴스가 섞여 있습니다. 반사계수의 <b>크기만</b> 맞히세요.</li>" +
+            "<li>차트를 누르면 원점에서 그 자리까지의 거리가 크기 추측이 됩니다. 점선은 「정답 확인」 뒤에 보입니다.</li></ul>",
+      hint: "<ul><li>2주차 「식 ①에 식 ②를 넣으면: 정재파의 최대·최소」: 최대는 " + mm(mn("1") + mo("+") + M.aG) +
+            ", 최소는 " + mm(mn("1") + mo(MINUS) + M.aG) + " 입니다.</li>" +
+            "<li>최소점과 최소점 사이는 " + mm(M.lam + mo("/") + mn("2")) + " 입니다. 그 한 구간을 몇 군데 재서 가장 낮은 곳을 찾고, 양옆을 촘촘히 다시 재세요.</li></ul>",
+      learned: "<ul><li>" + mm(M.aGL) + " 은 최대와 최소만 알면 정해집니다. 최소가 " + mm(mn("1") + mo(MINUS) + M.aGL) + " 입니다.</li>" +
+               "<li>그래서 2주차 「정재파비 SWR: 반사를 크기 하나로」처럼 최대 ÷ 최소 하나로 반사의 크기를 말합니다.</li>" +
+               "<li>차트에서는 원점 중심 원의 반지름입니다. 2주차 「반사 크기가 같은 점들: 원점 중심의 원」 그대로입니다.</li></ul>"
+    },
+    4: {
+      info: function () {
+        return "<ul><li>반사계수의 크기는 " + mm(M.aGL + mo("≈") + mn(P.ringMag(st.truth).toFixed(2))) +
+               " 로 알려 드립니다. 차트의 남색 점선 원 위에서 <b>각만</b> 찾으세요.</li>" +
+               "<li>점선 무늬는 「정답 확인」 뒤에 보입니다.</li></ul>";
+      },
+      hint: "<ul><li>2주차 「같은 문제를 차트로」: 전압이 가장 낮은 자리에서는 반사계수가 차트 왼쪽 가로축 위, 각 180° 에 옵니다.</li>" +
+            "<li>2주차 「선로를 따라 돌기」: 부하에서 소스 쪽으로 가면 차트에서 시계 방향으로 돕니다. 거꾸로 최소점에서 부하 쪽으로 오면 반시계로 " + TWO_BL + " 만큼 돕니다. 여기서 " + mm(M.ell) + " 은 부하에서 최소점까지의 거리입니다.</li>" +
+            "<li>계산하지 않고 차트 바깥 <b>부하 쪽 눈금</b>으로 바로 찾아도 됩니다. 1학기 종이 스미스 차트의 그 눈금입니다.</li>" +
+            "<li>그러니 최소점 자리만 정확히 찾으면 됩니다. 크기는 이미 알고 있습니다.</li></ul>",
+      learned: function () {
+        var lm = P.minPos(st.truth), rot = 720 * lm, ang = 180 + rot;
+        if (ang > 180) ang -= 360;
+        return "<p><b>부하 찾는 순서</b></p><ol>" +
+          "<li>선로를 재서 가장 낮은 곳, 곧 최소점을 찾습니다. 부하에서 그 자리까지의 거리 " + mm(M.ell) + " 을 파장 단위로 읽습니다.</li>" +
+          "<li>최소점의 반사계수는 " + mm(mo(MINUS) + M.aGL) + " 입니다. 차트 왼쪽 가로축 위, 단락 방향에 있고 부하 쪽 눈금으로는 0 입니다.</li>" +
+          "<li>그 방향에서 안쪽 <b>부하 쪽 눈금</b>을 따라 반시계로 " + mm(M.ell + mo("/") + M.lam) + " 만큼 갑니다. 그 눈금이 부하의 방향입니다.</li>" +
+          "<li>그 방향이 남색 점선 원과 만나는 점이 부하입니다.</li></ol>" +
+          "<ul><li>이번 부하는 최소점이 부하에서 " + num(lm, 3) + " 파장입니다. 계산으로는 180° 에서 반시계로 " + TWO_BL +
+          ", 곧 " + num(rot, 1) + "° 더 돌아 각 " + num(ang, 1) + "° 입니다.</li>" +
+          "<li>최소점이 부하에 가까울수록 각은 180° 에 가깝습니다. 최소점이 " + mm(M.lam + mo("/") + mn("4")) + " 떨어져 있으면 180° 에서 반 바퀴 더 돌아 0° 입니다.</li>" +
+          "<li>그래서 부하 점의 부하 쪽 눈금은 부하에서 최소점까지의 거리와 같은 수입니다. 종이 차트에서 선로 길이를 읽는 방법이 이것입니다.</li></ul>";
+      }
+    },
+    5: {
+      info: "<ul><li>이번에는 <b>크기와 각을 모두</b> 찾습니다. 3단계와 4단계에서 쓴 방법을 차례로 쓰세요.</li>" +
+            "<li>차트 아래 읽기 값의 SWR 과 최소점 자리가 잰 값과 맞는지 보세요.</li></ul>",
+      hint: "<ul><li>먼저 최소점을 찾으세요. 그 자리의 전압이 크기를, 그 자리의 위치가 각을 알려 줍니다.</li>" +
+            "<li>2주차 「정재파비 SWR: 반사를 크기 하나로」: SWR 은 가장 높은 전압을 가장 낮은 전압으로 나눈 값입니다.</li></ul>",
+      learned: "<ul><li>SWR 로 " + mm(M.aGL) + " 이 정해지고, 최소점 자리로 각이 정해집니다.</li>" +
+               "<li>곧 탐침으로 최소점 하나를 정확히 잡으면 부하가 정해집니다.</li></ul>"
+    },
+    6: {
+      info: "<ul><li>공기 선로, 주파수 <b>1 GHz</b>, 길이 450 mm 입니다. 빛의 속도는 " +
+            mm(mn("3") + mo("×") + "<msup><mn>10</mn><mn>8</mn></msup>") + " m/s 로 둡니다.</li>" +
+            "<li>탐침 자리는 mm 로, 추측의 최소점 자리는 " + mm(M.lam) + " 로 나옵니다.</li></ul>",
+      hint: "<ul><li>2주차 「전송선이란: 두 도체로 신호를 나르는 구조」의 예: 1 GHz 에서 3 cm 선은 " +
+            mm(mn("0.1") + M.lam) + " 입니다. 그러면 " + mm(M.lam) + " 는 몇 mm 일까요?</li>" +
+            "<li>최소점과 최소점 사이는 " + mm(M.lam + mo("/") + mn("2")) + " 입니다. 재서 확인해 보세요.</li></ul>",
+      learned: "<ul><li>1 GHz 공기 선로에서 " + mm(M.lam + mo("=") + mn("300")) + " mm, 최소점 간격은 150 mm 입니다.</li>" +
+               "<li>mm 를 " + mm(M.lam) + " 로 바꾸면 5단계와 같은 문제가 됩니다.</li></ul>"
+    },
+    7: {
+      info: "<ul><li>숨은 부하에 저항이 없고 <b>리액턴스만</b> 있습니다. 차트에서는 바깥 원 위만 고를 수 있습니다.</li>" +
+            "<li>탐침은 <b>두 번뿐</b>입니다. 주황 점선이 보이니, 어느 두 자리를 재야 답이 하나로 정해질지 먼저 생각해 보세요.</li>" +
+            "<li>점선이 두 탐침을 모두 지나는 자리가 바깥 원 위에 둘이면, 맞혀도 별은 하나입니다.</li></ul>",
+      hint: "<ul><li>2주차 「특별한 점 셋과 두 반원」: 바깥 원이 순리액턴스입니다.</li>" +
+            "<li>전부 되돌아오므로 무늬는 0 과 2 사이를 오갑니다. 한 번 재면 점선이 그 탐침을 지나는 자리가 바깥 원 위에 대개 둘 있습니다. 차트 점을 돌려 확인해 보세요.</li>" +
+            "<li>두 번째 탐침은 그 두 후보에서 다른 값이 나오는 자리여야 합니다. 첫 자리에서 " + mm(M.lam + mo("/") + mn("4")) +
+            " 떨어진 곳은 두 후보에서 같은 값이 나와 가르지 못합니다.</li></ul>",
+      learned: "<ul><li>리액턴스만 있으면 " + mm(M.aGL + mo("=") + mn("1")) + " 이라 전부 되돌려보냅니다. 위 반원이면 유도성, 아래 반원이면 용량성입니다.</li>" +
+               "<li>" + mm(M.lam + mo("/") + mn("8")) + " 떨어진 두 자리를 재면 후보가 하나로 갈립니다. " +
+               mm(M.lam + mo("/") + mn("4")) + " 떨어진 두 자리는 대개 후보 둘이 남습니다.</li>" +
+               "<li><b>더 알아보기</b>: 차트의 하늘색 원은 탐침 하나가 알려 주는 후보 자리입니다. 잰 전압의 크기가 부하 점과 하늘색 네모 사이의 거리와 같습니다.</li>" +
+               "<li><b>더 알아보기</b>: 하늘색 네모는 부하 자리에서 재면 단락 점에 있고, 재는 자리가 부하에서 멀어질수록 바깥 원을 따라 반시계로 돕니다. 두 하늘색 원이 바깥 원 위에서 함께 만나는 곳이 부하입니다.</li></ul>"
+    },
+    8: {
+      info: function () {
+        return "<ul><li>이번에는 거꾸로입니다. 부하는 " + mm(M.ZL + mo("=") + xOhm(st.load.X)) + " Ω 이고, 선로는 " +
+               mm(M.Z0 + mo("=") + mn("50")) + " Ω 입니다.</li>" +
+               "<li>전압이 0 이 되는 자리를 찾아 그곳을 재세요. 잰 전압이 0.15 이하면 성공입니다. 탐침은 다섯 번까지입니다.</li>" +
+               "<li>차트는 계산 도구입니다. 부하를 차트에 찍고 눈금을 읽어 보세요.</li></ul>";
+      },
+      hint: "<ul><li>리액턴스만 있는 부하는 바깥 원 위에 있습니다. 차트의 점을 바깥 원을 따라 돌려 읽기 칸의 " + mm(M.zL) +
+            " 을 부하 값에 맞추세요. " + mm(M.zL) + " 은 " + mm(M.ZL) + " 을 50 으로 나눈 값입니다. 딱 맞지 않으면 가장 가까운 값에 맞추면 됩니다.</li>" +
+            "<li>4단계 설명: 부하 점의 부하 쪽 눈금은 부하에서 최소점까지의 거리와 같은 수입니다.</li>" +
+            "<li>7단계에서 본 것처럼 리액턴스만 있으면 최소점의 전압이 0 입니다.</li></ul>",
+      learned: function () {
+        var lm = P.minPos(st.truth), xn = st.load.X / 50;
+        return "<ul><li>부하에서 최소점 찾기는 4단계의 거꾸로입니다. 차트에 " + mm(M.zL) + " 을 찍고 부하 쪽 눈금을 읽으면, 그 값이 전압 0 자리의 " +
+               mm(M.ell + mo("/") + M.lam) + " 입니다.</li>" +
+               "<li>이번 부하는 " + mm(M.zL + mo("=") + xOhm(xn, 2)) + " 이고 부하 쪽 눈금이 " + num(lm, 3) +
+               " 입니다. 그래서 부하에서 " + num(lm, 3) + " 파장 자리의 전압이 0 이고, " + mm(M.lam + mo("/") + mn("2")) + " 마다 되풀이됩니다.</li>" +
+               "<li>1학기 9주차 종이 차트 과제의 「선로 길이 구하기」와 같은 방법입니다.</li></ul>";
+      }
+    }
+  };
+
+  // ── 기록 (브라우저에만. 못 써도 게임은 된다) ──
+  var memRec = {};                                   // 브라우저 저장이 막혀도 이 창의 기록은 남긴다
+  function loadRec() {
+    var r = {};
+    try { r = JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { r = {}; }
+    Object.keys(memRec).forEach(function (k) { if (!r[k] || memRec[k].stars > r[k].stars) r[k] = memRec[k]; });
+    return r;
+  }
+  function saveRec(rec) {
+    Object.keys(rec).forEach(function (k) { memRec[k] = rec[k]; });
+    try { localStorage.setItem(STORE, JSON.stringify(rec)); } catch (e) { /* 무시 */ }
+  }
+  function starText(n) { return "★★★".slice(0, n) + "☆☆☆".slice(0, 3 - n); }
+
+  // ── 숫자 표기 (마이너스는 U+2212, −0 은 0) ──
+  function num(v, d) {
+    var s = v.toFixed(d);
+    if (Number(s) === 0) s = (0).toFixed(d);
+    return s.replace("-", MINUS);
+  }
+  function numAuto(v) {
+    var a = Math.abs(v);
+    return num(v, a >= 100 ? 0 : a >= 10 ? 1 : 2);
+  }
+  function ohm(v) { return (Math.round(v * 10) / 10).toString(); }
+
+  // ── 상태 ──
+  var st = null;
+
+  function show(name) {
+    ["home", "play", "result"].forEach(function (n) { $("scr-" + n).hidden = n !== name; });
+    window.scrollTo(0, 0);
+    if (name === "play") redraw();
+  }
+
+  function buildCards() {
+    var rec = loadRec(), box = $("levelCards");
+    box.innerHTML = "";
+    P.LEVELS.forEach(function (lv) {
+      var r = rec[lv.id], b = document.createElement("button");
+      b.className = "단계";
+      var sub = r ? (r.gave && !r.stars ? "정답 봄" : "탐침 " + r.probes + "번") : "아직 안 함";
+      b.innerHTML = "<b>" + lv.id + "단계</b>" + lv.name + "<br><span class='별'>" +
+        starText(r ? r.stars : 0) + "</span> <span class='작게'>" + sub + "</span>";
+      b.onclick = function () { start(lv.id); };
+      box.appendChild(b);
+    });
+  }
+
+  function start(id) {
+    var lv = P.level(id), prev = st && st.lv.id === id ? st.load : null, load;
+    do { load = P.makeLoad(id, Math.random); }
+    while (prev && load.R === prev.R && load.X === prev.X && !!load.open === !!prev.open);
+    st = { lv: lv, load: load, truth: P.gammaL(load), probes: [], count: 0, nProbe: 0, wrong: 0,
+           guess: null, sent: null, solved: false, gaveUp: false, sel: -1, cursor: null, lastWrong: null };
+    st.ring = lv.snap === "ring" ? P.ringMag(st.truth) : null;
+    $("lvTitle").textContent = id + "단계 · " + lv.name;
+    $("goal").textContent = "별 셋: " + lv.stars[0] + "번 이하";
+    $("lvInfo").innerHTML = typeof TEXT[id].info === "function" ? TEXT[id].info() : TEXT[id].info;
+    $("hintBox").hidden = true; $("hintBox").innerHTML = TEXT[id].hint;
+    $("learned").hidden = true;
+    $("learned").innerHTML = typeof TEXT[id].learned === "function" ? TEXT[id].learned() : TEXT[id].learned;
+    $("giveUp").hidden = true; $("nextBtn").hidden = true;
+    $("nextBtn").textContent = id < P.LEVELS.length ? "다음 단계" : "나의 기록 보기";
+    $("submit").disabled = false;
+    $("submit").hidden = !!lv.nullHunt;
+    $("lgTruth").hidden = true;
+    $("lgGuessText").textContent = lv.snap === "radius" ? "마지막으로 낸 크기의 최대, 최소" :
+      lv.overlay === "after" ? "마지막으로 낸 추측" : "추측한 부하";
+    msg("", "");
+    show("play");
+    updateAll();
+  }
+
+  function msg(t, cls) { var e = $("msg"); e.textContent = t; e.className = cls || ""; }
+
+  // ── 탐침 ──
+  function lamMM() { return P.lamMM(st.lv); }
+  function posText(l) {
+    if (st.lv.unit === "mm") return mm(M.ell + mo("=") + mn(String(Math.round(l * lamMM())))) + " mm";
+    return mm(M.ell + mo("=") + mn(num(l, 3)) + M.lam);
+  }
+  function addProbe(l) {
+    for (var i = 0; i < st.probes.length; i++) {
+      if (Math.abs(st.probes[i].l - l) < 1e-9) { st.sel = i; updateAll(); return; }   // 같은 자리는 다시 세지 않는다
+    }
+    var counting = !st.solved && !st.gaveUp;
+    if (counting && st.nProbe >= st.lv.cap) {
+      msg(st.lv.nullHunt ? "탐침을 다 썼습니다. 「정답 보기」로 전압 0 자리를 확인해 보세요." :
+          "탐침을 다 썼습니다. 지금까지 잰 값으로 답을 내세요.", "주의");
+      $("giveUp").hidden = false;
+      updateAll();
+      return;
+    }
+    st.probes.push({ l: l, v: P.vmag(st.truth, l) });
+    st.sel = st.probes.length - 1;
+    if (counting) { st.count++; st.nProbe++; }
+    if (counting && st.lv.nullHunt) {
+      var pv = st.probes[st.sel].v;
+      if (P.nullHit(st.lv, pv)) {
+        st.solved = true;
+        var s8 = P.starsFor(st.lv, st.count);
+        finish(s8, false);
+        $("msg").className = "좋음";
+        $("msg").innerHTML = "찾았습니다! 전압이 " + num(pv, 2) + " 입니다. 탐침 " + st.count + "번, 별 " + starText(s8) + "<br>" + truthText();
+        return;
+      }
+      if (st.nProbe >= st.lv.cap) { msg("탐침을 다 썼습니다. 「정답 보기」로 전압 0 자리를 확인해 보세요.", "주의"); $("giveUp").hidden = false; }
+      else msg("아직 0 이 아닙니다. 남은 탐침 " + (st.lv.cap - st.nProbe) + "번.", "주의");
+    }
+    updateAll();
+  }
+
+  function updateProbeRead() {
+    var el = $("probeRead"), p = st.sel >= 0 ? st.probes[st.sel] : null;
+    if (st.cursor !== null) {
+      el.innerHTML = posText(st.cursor) + ' <span class="대기">떼면 잽니다</span>';
+    } else if (!p) {
+      el.innerHTML = '<span class="대기">선로를 눌러 재 보세요</span>';
+    } else {
+      el.innerHTML = "<span>" + posText(p.l) + "</span><span>" + mm(M.V + mo("=") + mn(num(p.v, 2))) + "</span>";
+    }
+  }
+
+  function updateLog() {
+    var ul = $("log");
+    ul.innerHTML = "";
+    if (!st.probes.length) {
+      ul.innerHTML = "<li style='cursor:default;color:#999'>아직 없습니다</li>";
+      return;
+    }
+    st.probes.forEach(function (p, i) {
+      var li = document.createElement("li");
+      if (i === st.sel) li.className = "고름";
+      li.innerHTML = "<span class='번호'>" + (i + 1) + "</span><span>" + posText(p.l) +
+        "</span><span class='값'>" + mm(M.V + mo("=") + mn(num(p.v, 2))) + "</span>";
+      li.onclick = function () { st.sel = i; updateAll(); };
+      ul.appendChild(li);
+    });
+  }
+
+  // ── 추측 읽기 ──
+  function zText(z) {
+    if (!z) return mm(M.zL + mo("=") + mo("∞"));
+    var re = numAuto(z.re), im = numAuto(Math.abs(z.im));
+    if (Number(im) === 0) return mm(M.zL + mo("=") + mn(re));             // 순저항
+    if (Number(re) === 0) return mm(M.zL + mo("=") + (z.im < 0 ? mo(MINUS) : "") + "<mi>j</mi>" + mn(im));
+    return mm(M.zL + mo("=") + mn(re) + mo(z.im < 0 ? MINUS : "+") + "<mi>j</mi>" + mn(im));
+  }
+  function swrText(s) {
+    return mm("<mtext>SWR</mtext>" + mo("=") + (s === Infinity ? mo("∞") : mn(s < 10 ? num(s, 2) : s < 100 ? num(s, 1) : num(s, 0))));
+  }
+  function angText(q) { return mo("∠") + mn(String(q.deg).replace("-", MINUS) + "°"); }
+  function minText(g) {
+    var lm = P.minPos(g);
+    return "최소점 " + (lm === null ? "없음" : mm(M.ell + mo("=") + mn(num(lm, 3)) + M.lam));
+  }
+  function scaleText(q) {
+    if (q.mag === 0) return "<div>소스 쪽 눈금 —</div><div>부하 쪽 눈금 —</div>";
+    var s = P.rimScale(q.deg);
+    return "<div>소스 쪽 눈금 " + mm(mn(num(s.src, 3)) + M.lam) + "</div>" +
+           "<div>부하 쪽 눈금 " + mm(mn(num(s.load, 3)) + M.lam) + "</div>";
+  }
+  function updateGuessRead() {
+    var el = $("guessRead"), lv = st.lv;
+    if (!st.guess) {
+      el.innerHTML = '<div class="한줄 대기">' + (lv.snap === "three" ? "차트의 세 점 중 하나를 누르세요" :
+        lv.snap === "radius" ? "차트를 누르거나 끌어 크기를 고르세요" :
+        lv.snap === "ring" ? "점선 원 위를 누르거나 끌어 각을 고르세요" :
+        "차트를 누르거나 끌어 부하를 추측하세요") + "</div>";
+      return;
+    }
+    var q = st.guess;
+    if (lv.snap === "radius") {
+      el.innerHTML = "<div>" + mm(M.aGL + mo("=") + mn(num(q.mag, 2))) + "</div><div>" + swrText(P.swr(q.g)) + "</div>";
+      return;
+    }
+    if (lv.snap === "ring") {
+      el.innerHTML = '<div class="한줄">' + mm("<mo>∠</mo>" + M.GL + mo("=") + mn(String(q.deg).replace("-", MINUS) + "°")) + "</div>" +
+        scaleText(q);
+      return;
+    }
+    if (lv.nullHunt) {
+      el.innerHTML = "<div>" + mm(M.GL + mo("=") + mn(num(q.mag, 2)) + angText(q)) + "</div>" +
+        "<div>" + zText(P.zFromGamma(q.g)) + "</div>" + scaleText(q);
+      return;
+    }
+    el.innerHTML =
+      "<div>" + mm(M.GL + mo("=") + mn(num(q.mag, 2)) + angText(q)) + "</div>" +
+      "<div>" + swrText(P.swr(q.g)) + "</div>" +
+      "<div>" + zText(P.zFromGamma(q.g)) + "</div>" +
+      "<div>" + minText(q.g) + "</div>" + scaleText(q);
+  }
+
+  function updateAll() {
+    $("probeCount").textContent = st.count;
+    $("remain").textContent = st.solved || st.gaveUp ? "" : "남은 탐침 " + Math.max(0, st.lv.cap - st.nProbe) + "번";
+    $("lgGuess").hidden = st.lv.overlay === "none" || !(st.lv.overlay === "live" || st.sent);
+    updateProbeRead();
+    updateGuessRead();
+    updateLog();
+    redraw();
+  }
+
+  // ── 캔버스 맞춤 (논리 좌표로 그린다) ──
+  function fit(cv, W, H) {
+    var cssW = cv.parentNode.clientWidth;
+    var maxW = Number(window.innerWidth >= 900 && cv.dataset.maxwWide ? cv.dataset.maxwWide : cv.dataset.maxw) || 1e9;
+    cssW = Math.min(cssW, maxW);
+    if (cssW <= 0) return null;
+    var dpr = window.devicePixelRatio || 1, cssH = cssW * H / W;
+    cv.style.width = cssW + "px"; cv.style.height = cssH + "px";
+    cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+    var ctx = cv.getContext("2d"), s = cssW * dpr / W;
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    return ctx;
+  }
+  function toLogical(cv, e, W) {
+    var r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * W / r.width };
+  }
+  function seg(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  function haloText(ctx, t, x, y, color) {
+    ctx.lineWidth = 4; ctx.strokeStyle = "#fff"; ctx.lineJoin = "round";
+    ctx.strokeText(t, x, y); ctx.fillStyle = color; ctx.fillText(t, x, y);
+  }
+
+  // 글 조각 잇기. 종류: 0 세리프 · 1 세리프 기울임 · 2 아래첨자 · 3 위첨자(바로 앞 아래첨자 위에 겹침) · 4 고딕
+  function runs(ctx, parts, x, y, size, color, center) {
+    function fontOf(k) {
+      if (k === 4) return size + "px " + SANS;
+      return (k === 1 ? "italic " : "") + (k >= 2 ? Math.round(size * 0.66) : size) + "px " + SERIF;
+    }
+    function lay(x0, draw) {
+      var cx = x0, subX = null;
+      parts.forEach(function (q) {
+        ctx.font = fontOf(q[1]);
+        var w = ctx.measureText(q[0]).width, px = cx, dy = 0;
+        if (q[1] === 2) { subX = cx; dy = size * 0.32; }
+        else if (q[1] === 3) { if (subX !== null) px = subX; dy = -size * 0.36; }
+        if (draw) ctx.fillText(q[0], px, y + dy);
+        if (q[1] === 3) { cx = Math.max(cx, px + w) + size * 0.12; subX = null; }
+        else { cx = px + w; if (q[1] !== 2) subX = null; }
+      });
+      return cx - x0;
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillStyle = color;
+    var x0 = center ? x - lay(x, false) / 2 : x;
+    return x0 + lay(x0, true);
+  }
+
+  // ── 선로 + 전압 그래프 ──
+  var LW = 520, LH = 324;
+  var X0 = 78, X1 = 448, XB = 486, YT = 12, YB = 50, YM = 31, BW = 26, BH = 28;
+  var GY0 = 80, GY1 = 262, VMAX = 2.15;
+  function xOf(l) { return X1 - (X1 - X0) * l / st.lv.len; }
+  function lOf(x) { return (X1 - x) / (X1 - X0) * st.lv.len; }
+  function yOf(v) { return GY1 - (GY1 - GY0) * v / VMAX; }
+
+  function curve(ctx, g) {
+    var N = 480;
+    ctx.beginPath();
+    for (var i = 0; i <= N; i++) {
+      var l = st.lv.len * i / N, x = xOf(l), y = yOf(P.vmag(g, l));
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function drawLine() {
+    var ctx = fit($("lineCv"), LW, LH);
+    if (!ctx || !st) return;
+    var lv = st.lv;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, LW, LH);
+
+    // 선로: 두 도체 → 포트 동그라미 → 조금 가서 부하 상자
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.6;
+    seg(ctx, X0, YT, XB, YT); seg(ctx, X0, YB, XB, YB);
+    seg(ctx, XB, YT, XB, YM - BH / 2); seg(ctx, XB, YB, XB, YM + BH / 2);
+    ctx.fillStyle = st.solved || st.gaveUp ? "#e6f2fb" : "#fdf1d6";
+    ctx.fillRect(XB - BW / 2, YM - BH / 2, BW, BH);
+    ctx.strokeRect(XB - BW / 2, YM - BH / 2, BW, BH);
+    if (!st.solved && !st.gaveUp) {
+      ctx.fillStyle = NAVY; ctx.font = "bold 21px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("?", XB, YM + 1);
+    }
+    [YT, YB].forEach(function (y) {
+      ctx.beginPath(); ctx.arc(X1, y, 5.5, 0, 2 * Math.PI);
+      ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = "#000"; ctx.stroke();
+    });
+    ctx.fillStyle = "#555"; ctx.font = "18px " + SANS; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText("소스 쪽", X0 - 8, YM);
+    // 탐침 자리 표시 (두 도체 사이)
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 3;
+    st.probes.forEach(function (p) { var x = xOf(p.l); seg(ctx, x, YT + 6, x, YB - 6); });
+
+    // 그래프 틀
+    ctx.strokeStyle = "#444"; ctx.lineWidth = 1;
+    seg(ctx, X0, GY0 - 6, X0, GY1); seg(ctx, X0, GY1, X1, GY1);
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = "#999";
+    seg(ctx, X0, yOf(1), X1, yOf(1));
+    ctx.strokeStyle = "#ccc"; seg(ctx, X0, yOf(2), X1, yOf(2));
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#444"; ctx.font = "18px " + SANS; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    [0, 1, 2].forEach(function (v) { ctx.fillText(String(v), X0 - 10, yOf(v)); });
+    // 가로 눈금: λ 단계는 0.25λ 마다, mm 단계는 50 mm 마다 (글자는 100 mm 마다)
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.strokeStyle = "#444"; ctx.font = "17px " + SANS;
+    var lam = lamMM();
+    var step = lv.unit === "mm" ? 50 / lam : 0.25, n = Math.round(lv.len / step);
+    for (var i = 0; i <= n; i++) {
+      var l = i * step, x = xOf(l);
+      seg(ctx, x, GY1, x, GY1 + 5);
+      var lab = null;
+      if (lv.unit === "mm") { var d = Math.round(l * lam); if (d % 100 === 0) lab = String(d); }
+      else lab = i === 0 ? "0" : String(Math.round(l * 100) / 100);
+      if (lab !== null) ctx.fillText(lab, x, GY1 + 9);
+    }
+
+    // 축 이름 (수식만, 사용자 2026-09-17). 세로 = 진행파 대비 전압, 가로 = 부하로부터의 거리
+    ctx.save();                                              // 세로축 이름: 세로선 가운데, 아래에서 위로
+    ctx.translate(28, (GY0 + GY1) / 2);
+    ctx.rotate(-Math.PI / 2);
+    runs(ctx, [["|", 0], ["\u2009", 0], ["V", 1], ["\u2009|", 0], ["  /  ", 0], ["|", 0], ["\u2009", 0], ["V", 1], ["0", 2], ["+", 3], ["|", 0]],
+         0, 0, 21, "#222", true);
+    ctx.restore();
+    runs(ctx, [["ℓ", 1], ["  /  ", 0], lv.unit === "mm" ? ["mm", 0] : ["λ", 1]],
+         (X0 + X1) / 2, GY1 + 44, 21, "#222", true);
+
+    // 정답 무늬 (맞힌 뒤)
+    if (st.solved || st.gaveUp) {
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 2.2; curve(ctx, st.truth);
+    }
+    // 추측 무늬: 1·2·7단계는 지금 추측, 3~6단계는 마지막으로 제출한 추측
+    var og = lv.overlay === "live" ? st.guess : st.sent;
+    if (og) {
+      ctx.strokeStyle = ORANGE; ctx.lineWidth = 2.6; ctx.setLineDash([8, 6]);
+      if (lv.snap === "radius") {                       // 크기만: 최대 1 + |Γ|, 최소 1 − |Γ| 두 줄
+        seg(ctx, X0, yOf(1 + og.mag), X1, yOf(1 + og.mag));
+        seg(ctx, X0, yOf(1 - og.mag), X1, yOf(1 - og.mag));
+      } else {
+        curve(ctx, og.g);
+      }
+      ctx.setLineDash([]);
+    }
+    // 탐침 점
+    st.probes.forEach(function (p, k) {
+      var x = xOf(p.l), y = yOf(p.v), big = k === st.sel;
+      ctx.beginPath(); ctx.arc(x, y, big ? 9 : 6.5, 0, 2 * Math.PI);
+      ctx.fillStyle = BLUE; ctx.fill();
+      ctx.lineWidth = big ? 2.2 : 1.1; ctx.strokeStyle = "#000"; ctx.stroke();
+    });
+    if (st.sel >= 0 && st.cursor === null) {
+      var ps = st.probes[st.sel], sx = xOf(ps.l), sy = yOf(ps.v);
+      ctx.font = "bold 20px " + SANS; ctx.textBaseline = "bottom";
+      var right = sx > X1 - 60;
+      ctx.textAlign = right ? "right" : "left";
+      haloText(ctx, num(ps.v, 2), sx + (right ? -9 : 9), sy - 6, NAVY);
+    }
+    // 고르는 중인 자리
+    if (st.cursor !== null) {
+      var cxp = xOf(st.cursor);
+      ctx.strokeStyle = NAVY; ctx.lineWidth = 1.4; ctx.setLineDash([4, 4]);
+      seg(ctx, cxp, YT - 8, cxp, GY1); ctx.setLineDash([]);
+    }
+  }
+
+  // ── 스미스 차트 ──
+  var SW = 440, SC = 220, SR = 158;          // 바깥 60 은 파장 눈금 두 줄 자리
+  function sp(g) { return [SC + SR * g.re, SC - SR * g.im]; }
+  function circleG(ctx, cxg, cyg, rg) {
+    ctx.beginPath(); ctx.arc(SC + SR * cxg, SC - SR * cyg, SR * rg, 0, 2 * Math.PI); ctx.stroke();
+  }
+  function drawSmith() {
+    var ctx = fit($("smithCv"), SW, SW);
+    if (!ctx || !st) return;
+    var lv = st.lv;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, SW, SW);
+
+    // 격자: 저항 원 r, 리액턴스 원 x (단위원 안만)
+    ctx.save();
+    ctx.beginPath(); ctx.arc(SC, SC, SR, 0, 2 * Math.PI); ctx.clip();
+    ctx.strokeStyle = "#c4c4c4"; ctx.lineWidth = 1;
+    [0.5, 1, 2].forEach(function (r) { circleG(ctx, r / (1 + r), 0, 1 / (1 + r)); });
+    [0.5, 1, 2].forEach(function (x) { circleG(ctx, 1, 1 / x, 1 / x); circleG(ctx, 1, -1 / x, 1 / x); });
+    ctx.restore();
+    ctx.strokeStyle = lv.snap === "real" ? NAVY : "#999"; ctx.lineWidth = lv.snap === "real" ? 3 : 1;
+    seg(ctx, SC - SR, SC, SC + SR, SC);
+    ctx.strokeStyle = lv.snap === "rim" ? NAVY : "#000"; ctx.lineWidth = lv.snap === "rim" ? 3.4 : 1.6;
+    ctx.beginPath(); ctx.arc(SC, SC, SR, 0, 2 * Math.PI); ctx.stroke();
+
+    // 파장 눈금: 안 줄 = 부하 쪽으로(반시계), 바깥 줄 = 소스 쪽으로(시계). 0.01λ 마다 눈금, 0.05λ 마다 숫자
+    var R1 = SR + 3, R2 = SR + 30;
+    ctx.strokeStyle = "#999"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(SC, SC, R2, 0, 2 * Math.PI); ctx.stroke();
+    ctx.font = "15px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (var k = 0; k < 50; k++) {
+      var w = k / 100, big = k % 5 === 0;
+      [[R1, 180 + 720 * w, "#555"], [R2, 180 - 720 * w, NAVY]].forEach(function (ring) {
+        var a = ring[1] * Math.PI / 180, ca = Math.cos(a), sa = -Math.sin(a), L = big ? 8 : 4;
+        ctx.strokeStyle = ring[2]; ctx.lineWidth = big ? 1.4 : 0.8;
+        seg(ctx, SC + ring[0] * ca, SC + ring[0] * sa, SC + (ring[0] + L) * ca, SC + (ring[0] + L) * sa);
+        if (big) {
+          var rl = ring[0] + 17, lab = k === 0 ? "0" : (w).toFixed(2).replace(/^0/, "");
+          ctx.fillStyle = ring[2];
+          ctx.fillText(lab, SC + rl * ca, SC + rl * sa);
+        }
+      });
+    }
+
+    // 찍은 점의 방향 (눈금 읽기용 가는 선). 3단계는 각을 보지 않으므로 긋지 않는다
+    if (st.guess && st.guess.mag > 0 && lv.snap !== "radius") {
+      var ga = st.guess.deg * Math.PI / 180;
+      ctx.strokeStyle = "#aaa"; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      seg(ctx, SC, SC, SC + (R2 + 8) * Math.cos(ga), SC - (R2 + 8) * Math.sin(ga));
+      ctx.setLineDash([]);
+    }
+
+    // 4단계: 알려 준 크기의 원 (남색 점선)
+    if (lv.snap === "ring") {
+      ctx.strokeStyle = NAVY; ctx.lineWidth = 2.2; ctx.setLineDash([7, 5]);
+      circleG(ctx, 0, 0, st.ring); ctx.setLineDash([]);
+    }
+    // 추측과 같은 크기의 원 — 3단계는 이것이 답이라 굵은 실선, 나머지는 가는 점선. 이름 글자 밑에 깔리게 먼저
+    if (st.guess && (lv.snap === "free" || lv.snap === "radius") && st.guess.mag > 0) {
+      ctx.strokeStyle = ORANGE;
+      if (lv.snap === "radius") { ctx.lineWidth = 3; }
+      else { ctx.lineWidth = 1.4; ctx.setLineDash([5, 5]); }
+      circleG(ctx, 0, 0, st.guess.mag); ctx.setLineDash([]);
+    }
+
+    // 이름
+    var dy = lv.snap === "three" ? 16 : 8;
+    ctx.font = "17px " + SANS; ctx.fillStyle = "#666"; ctx.textBaseline = "top";
+    ctx.textAlign = "left"; ctx.fillText("단락", SC - SR + 6, SC + dy);
+    ctx.textAlign = "right"; ctx.fillText("개방", SC + SR - 6, SC + dy);
+    ctx.textAlign = "center"; ctx.fillText("정합", SC, SC + dy + 2);
+    ctx.textBaseline = "middle";
+    haloText(ctx, "유도성", SC, SC - SR * 0.86, "#666");
+    haloText(ctx, "용량성", SC, SC + SR * 0.86, "#666");
+
+    // 1단계: 고를 수 있는 세 점
+    if (lv.snap === "three") {
+      [-1, 0, 1].forEach(function (v) {
+        ctx.beginPath(); ctx.arc(SC + SR * v, SC, 11, 0, 2 * Math.PI);
+        ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = NAVY; ctx.stroke();
+      });
+    } else {
+      ctx.beginPath(); ctx.arc(SC, SC, 2.5, 0, 2 * Math.PI); ctx.fillStyle = "#000"; ctx.fill();
+    }
+
+    // 추측: 주황 동그라미 (같은 크기 원은 이름보다 먼저 그렸다). 3단계는 크기만 보므로 작은 손잡이
+    if (st.guess) {
+      var p = sp(st.guess.g);
+      ctx.beginPath(); ctx.arc(p[0], p[1], lv.snap === "radius" ? 7 : 10, 0, 2 * Math.PI);
+      ctx.fillStyle = ORANGE; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = "#000"; ctx.stroke();
+    }
+    // 7단계: 맞히거나 정답을 본 뒤 탐침 원 (하늘색 원 + 기준점 네모)
+    if (lv.circles && (st.solved || st.gaveUp)) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(SC, SC, SR + 1, 0, 2 * Math.PI); ctx.clip();
+      ctx.strokeStyle = SKY; ctx.lineWidth = 2.4;
+      st.probes.forEach(function (pr) {
+        var pc = P.probeCircle(pr.l, pr.v);
+        circleG(ctx, pc.c.re, pc.c.im, pc.r);
+      });
+      ctx.restore();
+      st.probes.forEach(function (pr) {
+        var q2 = sp(P.probeCircle(pr.l, pr.v).c);
+        ctx.fillStyle = SKY; ctx.fillRect(q2[0] - 6, q2[1] - 6, 12, 12);
+        ctx.lineWidth = 1.2; ctx.strokeStyle = "#000"; ctx.strokeRect(q2[0] - 6, q2[1] - 6, 12, 12);
+      });
+    }
+    // 정답 (맞힌 뒤): 파란 마름모
+    if (st.solved || st.gaveUp) {
+      var t = sp(st.truth);
+      ctx.beginPath();
+      ctx.moveTo(t[0], t[1] - 9); ctx.lineTo(t[0] + 9, t[1]); ctx.lineTo(t[0], t[1] + 9); ctx.lineTo(t[0] - 9, t[1]);
+      ctx.closePath(); ctx.fillStyle = BLUE; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = "#000"; ctx.stroke();
+      ctx.font = "bold 17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      haloText(ctx, "정답", t[0], t[1] - 14, BLUE);
+    }
+  }
+
+  function redraw() { if (st && !$("scr-play").hidden) { drawLine(); drawSmith(); } }
+
+  // ── 조작: 선로 ── (시작한 포인터 하나만 따른다)
+  var lineCv = $("lineCv"), smithCv = $("smithCv");
+  var linePid = null, smithPid = null;
+  function lineAt(e) {
+    var p = toLogical(lineCv, e, LW);
+    return P.snapPos(st.lv, lOf(Math.max(X0, Math.min(X1, p.x))));
+  }
+  lineCv.addEventListener("pointerdown", function (e) {
+    if (!st || linePid !== null) return;
+    var p = toLogical(lineCv, e, LW);
+    if (p.x < X0 - 12 || p.x > X1 + 12) return;              // 축 숫자·여백은 탐침이 아니다
+    linePid = e.pointerId;
+    try { lineCv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+    st.cursor = lineAt(e); updateProbeRead(); redraw();
+  });
+  lineCv.addEventListener("pointermove", function (e) {
+    if (!st || e.pointerId !== linePid) return;
+    st.cursor = lineAt(e); updateProbeRead(); redraw();
+  });
+  lineCv.addEventListener("pointerup", function (e) {
+    if (!st || e.pointerId !== linePid) return;
+    linePid = null;
+    var l = st.cursor; st.cursor = null;
+    if (l !== null) addProbe(l);
+  });
+  lineCv.addEventListener("pointercancel", function (e) {
+    if (!st || e.pointerId !== linePid) return;
+    linePid = null; st.cursor = null; updateProbeRead(); redraw();
+  });
+
+  // ── 조작: 차트 ──
+  function smithAt(e) {
+    var p = toLogical(smithCv, e, SW);
+    st.guess = P.snapGuess(st.lv, (p.x - SC) / SR, (SC - p.y) / SR, st.ring);
+    updateGuessRead(); redraw();
+  }
+  smithCv.addEventListener("pointerdown", function (e) {
+    if (!st || smithPid !== null) return;
+    smithPid = e.pointerId;
+    try { smithCv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+    smithAt(e);
+  });
+  smithCv.addEventListener("pointermove", function (e) { if (st && e.pointerId === smithPid) smithAt(e); });
+  ["pointerup", "pointercancel"].forEach(function (tp) {
+    smithCv.addEventListener(tp, function (e) { if (e.pointerId === smithPid) smithPid = null; });
+  });
+
+  // ── 제출 ──
+  function record(stars, gave) {
+    var rec = loadRec(), old = rec[st.lv.id];
+    var mine = { stars: stars, probes: st.count, gave: !!gave };
+    if (!old || stars > old.stars || (stars === old.stars && stars > 0 && st.count < old.probes)) rec[st.lv.id] = mine;
+    saveRec(rec);
+  }
+  function truthText() {
+    var L = st.load;
+    if (st.lv.nullHunt) {
+      var z0 = P.minPos(st.truth);
+      return "전압 0 자리는 부하에서 " + num(z0, 3) + " 파장과 " + num(z0 + 0.5, 3) + " 파장입니다.";
+    }
+    if (L.kind === "open") return "숨은 부하는 개방이었습니다.";
+    if (L.kind === "short") return "숨은 부하는 단락이었습니다.";
+    if (L.kind === "match") return "숨은 부하는 정합이었습니다.";
+    var s;
+    if (L.kind === "R") s = mn(ohm(L.R));
+    else if (L.kind === "X") s = mo(L.X < 0 ? MINUS : "") + "<mi>j</mi>" + mn(ohm(Math.abs(L.X)));
+    else s = mn(ohm(L.R)) + mo(L.X < 0 ? MINUS : "+") + "<mi>j</mi>" + mn(ohm(Math.abs(L.X)));
+    return "숨은 부하는 " + mm(M.ZL + mo("=") + s) + " Ω 이었습니다.";
+  }
+  function finish(stars, gave) {
+    $("submit").disabled = true;
+    $("giveUp").hidden = true;
+    $("nextBtn").hidden = false;
+    $("learned").hidden = false;
+    $("lgTruth").hidden = false;
+    $("lgGuess").hidden = st.lv.overlay === "none";
+    record(stars, gave);
+    updateAll();
+  }
+  $("submit").onclick = function () {
+    if (!st || st.solved || st.gaveUp) return;
+    if (!st.count) { msg("먼저 선로를 한 번 이상 재 보세요.", "주의"); return; }
+    if (!st.guess) { msg("먼저 스미스 차트에 부하를 찍으세요.", "주의"); return; }
+    var key = st.lv.snap === "radius" ? String(st.guess.mag) : st.guess.mag + "/" + st.guess.deg;
+    if (key === st.lastWrong) { msg("방금 낸 추측과 같습니다. 차트의 점을 옮긴 뒤 확인하세요.", "주의"); return; }
+    var j = P.judge(st.lv, st.guess, st.truth);
+    st.sent = st.guess;
+    if (j.ok) {
+      st.solved = true;
+      var ev = P.evidence(st.lv, st.probes, st.truth);
+      var s = ev ? P.starsFor(st.lv, st.count) : 1;
+      finish(s, false);
+      $("msg").className = "좋음";
+      $("msg").innerHTML = "맞혔습니다! 탐침 " + st.count + "번, 별 " + starText(s) +
+        (ev ? "" : "<br>다만 " + (st.lv.snap === "free" || st.lv.snap === "radius" || st.lv.snap === "ring" ?
+          "가장 낮은 곳이나 가장 높은 곳 근처를 재지 않아" : "잰 값만으로는 답이 하나로 정해지지 않아") + " 별은 하나입니다.") +
+        "<br>" + truthText();
+      return;
+    }
+    st.wrong++; st.count += 2; st.lastWrong = key;
+    var t = {
+      wrong: "아닙니다. 부하 바로 앞의 전압을 떠올려 보세요.",
+      shallow: "아직입니다. 반사계수의 크기가 다릅니다.",
+      deep: "아직입니다. 반사계수의 크기가 다릅니다.",
+      angle: "아직입니다. 각이 다릅니다."
+    }[j.kind];
+    var note = st.lv.overlay !== "after" ? "" : st.lv.snap === "radius" ?
+      " 주황 점선 두 줄은 방금 낸 크기의 최대와 최소입니다." : " 주황 점선은 방금 낸 추측의 무늬입니다.";
+    msg(t + note + " 탐침 2번으로 칩니다.", "주의");
+    if (st.wrong >= 2) $("giveUp").hidden = false;
+    updateAll();
+  };
+  $("giveUp").onclick = function () {
+    if (!st || st.solved) return;
+    st.gaveUp = true;
+    finish(0, true);
+    $("msg").className = "주의";
+    $("msg").innerHTML = "정답을 보여 드립니다. 「같은 단계 새 부하」로 다시 해 보세요.<br>" + truthText();
+  };
+  $("hintBtn").onclick = function () { $("hintBox").hidden = !$("hintBox").hidden; };
+  $("nextBtn").onclick = function () {
+    if (st.lv.id < P.LEVELS.length) start(st.lv.id + 1); else showResult();
+  };
+  $("newBoard").onclick = function () { if (st) start(st.lv.id); };
+  $("toHome").onclick = function () { buildCards(); show("home"); };
+  $("toResult").onclick = showResult;
+  $("backHome").onclick = function () { buildCards(); show("home"); };
+
+  function showResult() {
+    var rec = loadRec(), tb = $("recTable"), tot = 0;
+    tb.innerHTML = "";
+    P.LEVELS.forEach(function (lv) {
+      var r = rec[lv.id], tr = document.createElement("tr");
+      var s = r ? r.stars : 0; tot += s;
+      tr.innerHTML = "<td>" + lv.id + "단계 " + lv.name + "</td><td class='별'>" + starText(s) + "</td><td class='수'>" +
+        (r ? (r.gave && !r.stars ? "정답 봄" : "탐침 " + r.probes + "번") : "—") + "</td>";
+      tb.appendChild(tr);
+    });
+    $("recTotal").textContent = "별 " + tot + " / " + (3 * P.LEVELS.length);
+    $("recWord").textContent = tot >= 20 ? "전압 무늬만 보고 부하를 찾아내는 탐정입니다. 즐거운 추석 보내세요!" :
+      tot >= 12 ? "좋습니다. 별이 적은 단계를 새 부하로 한 번 더 해 보세요." :
+      "힌트를 열고 2주차 슬라이드를 옆에 두고 다시 해 보세요. 몇 번이든 괜찮습니다.";
+    var d = new Date();
+    $("today").textContent = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+    show("result");
+  }
+
+  var rt = null;
+  window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(redraw, 80); });
+  buildCards();
+})();
+</script>
+</body>
+</html>
