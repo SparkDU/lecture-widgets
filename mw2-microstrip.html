@@ -41,16 +41,26 @@
 <h1>움직여 보기: 선폭과 Z0</h1>
 <div class="과목">초고주파공학 2</div>
 </header>
-<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+
 <main>
 <div style="text-align:center">
-<div class="캔버스틀"><canvas id="mstripsim" width="1920" height="800"
-        style="min-width:680px;width:100%;max-width:820px;touch-action:none"></canvas></div>
-<div style="max-width:820px;margin:0 auto;font-size:0.72em;display:flex;align-items:center;gap:12px">
+<div id="mstripbox" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px;max-width:1080px;margin:0 auto">
+<canvas id="mstripsim" width="1120" height="800"
+        style="flex:1 1 380px;max-width:540px;width:100%;touch-action:none"></canvas>
+<div style="flex:1 1 320px;text-align:left;line-height:1.55;font-size:max(0.9em, 20px)">
+<div><math><mi>W</mi><mo>/</mo><mi>d</mi><mo>=</mo><mn id="ms-wd">1.91</mn></math></div>
+<div><math><msub><mi>&#x3B5;</mi><mi>e</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>&#x3B5;</mi><mi>r</mi></msub><mo>+</mo><mn>1</mn></mrow><mn>2</mn></mfrac><mo>+</mo><mfrac><mrow><msub><mi>&#x3B5;</mi><mi>r</mi></msub><mo>&#x2212;</mo><mn>1</mn></mrow><mn>2</mn></mfrac><mfrac><mn>1</mn><msqrt><mn>1</mn><mo>+</mo><mn>12</mn><mi>d</mi><mo>/</mo><mi>W</mi></msqrt></mfrac><mo>=</mo><mn id="ms-ee">3.33</mn></math></div>
+<div><math><msub><mi>Z</mi><mn>0</mn></msub><mo>=</mo><mn id="ms-z0">50.3</mn><mtext>&#x2009;</mtext><mi mathvariant="normal">&#x3A9;</mi></math></div>
+<div><math><mi>&#x3BB;</mi><mo>=</mo><mfrac><msub><mi>&#x3BB;</mi><mn>0</mn></msub><msqrt><msub><mi>&#x3B5;</mi><mi>e</mi></msub></msqrt></mfrac><mo>=</mo><mfrac><mn>124.9</mn><mn id="ms-sqee">1.825</mn></mfrac><mo>=</mo><mn id="ms-lam">68.5</mn><mtext>&#x2009;mm</mtext></math></div>
+<div><math><mi>&#x3BB;</mi><mo>/</mo><mn>4</mn><mo>=</mo><mn id="ms-lam4">17.1</mn><mtext>&#x2009;mm</mtext></math></div>
+<div id="ms-hint" style="font-size:0.62em;color:#666;margin-top:0.5em">50 &#x3A9; 근처: 이 폭이 실제 PCB 의 RF 선</div>
+</div>
+</div>
+<div style="max-width:820px;margin:0.4em auto 0;font-size:0.72em;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
 <span style="white-space:nowrap">스트립 폭 <i>W</i> (mm)</span>
-<input id="mstripw" type="range" min="0.3" max="10" step="0.05" value="3.05" style="flex:1">
+<input id="mstripw" type="range" min="0.3" max="10" step="0.05" value="3.05" style="flex:1 1 160px">
 <span id="mstripwv" style="width:3.4em;text-align:left">3.05</span>
-<span style="color:#666">· FR-4 1.6 mm · 2.4 GHz</span>
+<span style="color:#666;white-space:nowrap">· FR-4 1.6 mm · 2.4 GHz</span>
 </div>
 </div>
 
@@ -60,9 +70,9 @@
   if (!cv || !cv.getContext) return;
   var ctx = cv.getContext("2d");
   var slider = document.getElementById("mstripw"), wv = document.getElementById("mstripwv");
-  var ORANGE = "#E69F00", BLUE = "#0072B2", INK = "#222222", COND = "#555555", DIEL = "#DCEBF7";
+  var ORANGE = "#E69F00", INK = "#222222", COND = "#555555", DIEL = "#DCEBF7";
   var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-  var W = 960, H = 400;
+  var W = 560, H = 400;
   var ER = 4.4, D = 1.6, F = 2.4e9, C0 = 299792458;
   var wmm = 3.05;
 
@@ -84,13 +94,14 @@
     }
     return x;
   }
+  function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
   function draw() {
     ctx.setTransform(2, 0, 0, 2, 0, 0);
     ctx.clearRect(0, 0, W, H);
     var wd = wmm / D, e = ee(wd), z = z0(wd);
     var lam0 = C0 / F * 1e3, lam = lam0 / Math.sqrt(e);
 
-    var S = 34, X0 = 40, YG = 300, SUBW = 12 * S;
+    var S = 34, X0 = 40, YG = 240, SUBW = 12 * S;
     ctx.fillStyle = DIEL; ctx.fillRect(X0, YG - D * S, SUBW, D * S);
     ctx.strokeStyle = "#888"; ctx.lineWidth = 0.8; ctx.strokeRect(X0, YG - D * S, SUBW, D * S);
     ctx.fillStyle = COND; ctx.fillRect(X0, YG, SUBW, 8);
@@ -114,18 +125,11 @@
     label("실척 단면 · 기판 FR-4 (εr = 4.4)", X0, YG + 30, "#666", "14px " + SANS);
     label("주황 화살 = 전계 (스트립 → 접지면)", X0, YG + 50, "#666", "14px " + SANS);
 
-    var xr = 560, y0 = 60, dy = 46;
-    runs([["W", "italic 22px " + SERIF], [" / ", "22px " + SERIF], ["d", "italic 22px " + SERIF], [" = " + wd.toFixed(2), "22px " + SERIF]], xr, y0);
-    runs([["ε", "italic 22px " + SERIF], ["e", "italic 14px " + SERIF, INK, 7], [" = ", "22px " + SERIF],
-          ["(ε", "20px " + SERIF], ["r", "italic 13px " + SERIF, INK, 6], ["+1)/2 + (ε", "20px " + SERIF], ["r", "italic 13px " + SERIF, INK, 6],
-          ["−1)/2 · 1/√(1+12", "20px " + SERIF], ["d", "italic 20px " + SERIF], ["/", "20px " + SERIF], ["W", "italic 20px " + SERIF], [")", "20px " + SERIF]], xr, y0 + dy);
-    runs([["    = " + e.toFixed(2), "22px " + SERIF, BLUE]], xr, y0 + 1.7 * dy);
-    runs([["Z", "italic 22px " + SERIF], ["0", "14px " + SERIF, INK, 7], [" = " + z.toFixed(1) + " Ω", "22px " + SERIF, z > 49 && z < 51 ? ORANGE : INK]], xr, y0 + 2.7 * dy);
-    runs([["λ", "italic 22px " + SERIF], [" = λ", "22px " + SERIF], ["0", "14px " + SERIF, INK, 7], [" / √ε", "22px " + SERIF], ["e", "italic 14px " + SERIF, INK, 7],
-          [" = " + lam0.toFixed(1) + " / " + Math.sqrt(e).toFixed(3) + " = " + lam.toFixed(1) + " mm", "22px " + SERIF]], xr, y0 + 3.7 * dy);
-    runs([["λ", "italic 22px " + SERIF], ["/4 = " + (lam / 4).toFixed(1) + " mm", "22px " + SERIF, BLUE]], xr, y0 + 4.7 * dy);
-    label(z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 크다 → 스트립을 넓히세요" : "50 Ω 보다 작다 → 스트립을 좁히세요"),
-          xr, y0 + 5.9 * dy, "#666", "15px " + SANS);
+    setText("ms-wd", wd.toFixed(2)); setText("ms-ee", e.toFixed(2));
+    setText("ms-z0", z.toFixed(1));
+    var zel = document.getElementById("ms-z0"); if (zel) zel.style.color = (z > 49 && z < 51) ? ORANGE : "";
+    setText("ms-sqee", Math.sqrt(e).toFixed(3)); setText("ms-lam", lam.toFixed(1)); setText("ms-lam4", (lam / 4).toFixed(1));
+    setText("ms-hint", z > 49 && z < 51 ? "50 Ω 근처: 이 폭이 실제 PCB 의 RF 선" : (z > 51 ? "50 Ω 보다 크다 → 스트립을 넓히세요" : "50 Ω 보다 작다 → 스트립을 좁히세요"));
   }
   slider.addEventListener("input", function () { wmm = Math.round(parseFloat(slider.value) * 20) / 20; wv.textContent = wmm.toFixed(2); draw(); });
   slider.addEventListener("keydown", function (e) { e.stopPropagation(); });
