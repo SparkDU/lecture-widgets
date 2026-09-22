@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>움직여 보기: 폭과 길이를 바꾸면 곡선이 움직인다 · 초고주파공학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>움직여 보기: 폭과 길이를 바꾸면 곡선이 움직인다</h1>
+<div class="과목">초고주파공학 2</div>
+</header>
+
+<main>
+<div style="text-align:center">
+<div id="qwbox" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;max-width:1120px;margin:0 auto">
+<canvas id="qwsim" width="1120" height="800"
+        style="flex:1 1 400px;max-width:600px;width:100%;touch-action:none"></canvas>
+<div style="flex:1 1 300px;text-align:left;line-height:1.55;font-size:max(0.86em, 20px)">
+<div><math><msub><mi>Z</mi><mn>1</mn></msub><mo>=</mo><mn id="qw-z1">70.9</mn><mtext>&#x2009;</mtext><mi mathvariant="normal">&#x3A9;</mi></math> <span style="color:#666;font-size:0.75em">(목표 <math><msqrt><mn>50</mn><mo>&#xD7;</mo><mn>100</mn></msqrt><mo>=</mo><mn>70.7</mn></math>)</span></div>
+<div><math><msub><mi>&#x3B5;</mi><mi>e</mi></msub><mo>=</mo><mn id="qw-ee">3.17</mn></math></div>
+<div><math><mi>&#x3BB;</mi><mo>/</mo><mn>4</mn><mo>=</mo><mn id="qw-lam4">17.5</mn><mtext>&#x2009;mm</mtext></math> <span style="color:#666;font-size:0.75em">(2.4 GHz, 이 폭에서)</span></div>
+<div><math><mo>|</mo><mi mathvariant="normal">&#x393;</mi><mo>|</mo><mo>=</mo><mn id="qw-g0">0.01</mn></math> <span style="color:#666;font-size:0.75em">(2.4 GHz)</span></div>
+<div id="qw-bw"><math><mo>|</mo><mi mathvariant="normal">&#x393;</mi><mo>|</mo><mo>&#x2264;</mo><mn>0.2</mn></math> <span style="color:#666;font-size:0.75em">인 구간</span>: <span id="qw-bwv">1.5 ~ 3.3 GHz</span></div>
+<div id="qw-hint" style="font-size:0.62em;color:#666;margin-top:0.5em">폭이 Z<sub>1</sub> 을, 길이가 골의 위치를 정합니다</div>
+</div>
+</div>
+<div style="max-width:900px;margin:0.4em auto 0;font-size:0.72em;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<span style="white-space:nowrap">변환기 폭 <i>W</i> (mm)</span>
+<input id="qww" type="range" min="0.3" max="10" step="0.05" value="1.60" style="flex:1 1 140px">
+<span id="qwwv" style="width:3.2em;text-align:left">1.60</span>
+<span style="white-space:nowrap;margin-left:8px">길이 <i>&#x2113;</i> (mm)</span>
+<input id="qwl" type="range" min="5" max="40" step="0.1" value="17.5" style="flex:1 1 140px">
+<span id="qwlv" style="width:3.2em;text-align:left">17.5</span>
+<span style="color:#666;white-space:nowrap">· FR-4 1.6 mm · 50 &#x3A9; → 100 &#x3A9;</span>
+</div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("qwsim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var sw = document.getElementById("qww"), swv = document.getElementById("qwwv");
+  var sl = document.getElementById("qwl"), slv = document.getElementById("qwlv");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", INK = "#222222", COND = "#555555", GREY = "#999999";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  var W = 560, H = 400;
+  var ER = 4.4, D = 1.6, F0 = 2.4e9, C0 = 299792458, Z0 = 50, ZL = 100, GM = 0.2;
+  var wmm = 1.60, lmm = 17.5;
+
+  function ee(wd) { return (ER + 1) / 2 + (ER - 1) / 2 / Math.sqrt(1 + 12 / wd); }
+  function z0(wd) {
+    var e = ee(wd);
+    if (wd <= 1) return 60 / Math.sqrt(e) * Math.log(8 / wd + wd / 4);
+    return 120 * Math.PI / (Math.sqrt(e) * (wd + 1.393 + 0.667 * Math.log(wd + 1.444)));
+  }
+
+  function gammaAt(f, Z1, e, ell) {
+    var beta = 2 * Math.PI * f * Math.sqrt(e) / C0, t = Math.tan(beta * ell);
+
+    var nr = ZL, ni = Z1 * t, dr = Z1, di = ZL * t, dd = dr * dr + di * di;
+    var zr = Z1 * (nr * dr + ni * di) / dd, zi = Z1 * (ni * dr - nr * di) / dd;
+    var gr = zr - Z0, gi = zi, hr = zr + Z0, hi = zi, hh = hr * hr + hi * hi;
+    return Math.sqrt((gr * gr + gi * gi) / hh);
+  }
+  function label(txt, x, y, color, font, align) {
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x, y);
+  }
+  function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var wd = wmm / D, e = ee(wd), Z1 = z0(wd), ell = lmm * 1e-3;
+    var lam4 = C0 / (F0 * Math.sqrt(e)) / 4 * 1e3;
+
+    var S = 9, y0 = 62, x0 = 40, W0 = 3.06, xl = x0 + 12 * S;
+    ctx.fillStyle = COND; ctx.fillRect(x0, y0 - W0 * S / 2, 12 * S, W0 * S);
+    ctx.fillStyle = ORANGE; ctx.fillRect(xl, y0 - wmm * S / 2, lmm * S, wmm * S);
+    var xe = xl + lmm * S;
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillStyle = "white";
+    ctx.beginPath(); ctx.rect(xe + 8, y0 - 14, 20, 28); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xe, y0); ctx.lineTo(xe + 8, y0); ctx.stroke();
+    label("Z", xe + 14, y0, INK, "italic 13px " + SERIF, "center"); label("L", xe + 22, y0 + 5, INK, "italic 9px " + SERIF, "center");
+    label("50 Ω · 3.06 mm", x0 + 6 * S, y0 + W0 * S / 2 + 14, "#666", "12px " + SANS, "center");
+    label("W = " + wmm.toFixed(2) + " mm · ℓ = " + lmm.toFixed(1) + " mm", xl + lmm * S / 2, y0 - Math.max(wmm, W0) * S / 2 - 14, "#8a5a00", "12px " + SANS, "center");
+    label("위에서 본 스트립 (실척)", x0, 14, "#666", "12px " + SANS);
+
+    var px0 = 52, px1 = 540, py0 = 372, py1 = 150;
+    var fa = 1e9, fb = 4e9;
+    function X(f) { return px0 + (f - fa) / (fb - fa) * (px1 - px0); }
+    function Y(g) { return py0 - g * (py0 - py1); }
+    ctx.strokeStyle = "#444"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px0, py1); ctx.lineTo(px0, py0); ctx.lineTo(px1, py0); ctx.stroke();
+    for (var k = 1; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(X(k * 1e9), py0); ctx.lineTo(X(k * 1e9), py0 + 5); ctx.stroke(); label(k + "", X(k * 1e9), py0 + 14, INK, "12px " + SANS, "center"); }
+    for (var g = 0; g <= 1.0001; g += 0.25) { ctx.beginPath(); ctx.moveTo(px0 - 5, Y(g)); ctx.lineTo(px0, Y(g)); ctx.stroke(); label(g.toFixed(2), px0 - 8, Y(g), INK, "11px " + SANS, "right"); }
+    label("f (GHz)", px1 + 4, py0 + 14, INK, "italic 13px " + SERIF, "right");
+    label("|Γ|", px0 - 8, py1 - 12, INK, "13px " + SERIF, "right");
+
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = ORANGE; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(px0, Y(GM)); ctx.lineTo(px1, Y(GM)); ctx.stroke();
+    ctx.strokeStyle = GREY; ctx.beginPath(); ctx.moveTo(X(F0), py0); ctx.lineTo(X(F0), py1); ctx.stroke();
+    ctx.setLineDash([]);
+    label("Γm = 0.2", px1 - 4, Y(GM) - 9, "#8a5a00", "11px " + SANS, "right");
+    label("2.4 GHz", X(F0) + 4, py1 + 8, "#666", "11px " + SANS);
+
+    var N = 300, lo = null, hi = null, g0 = gammaAt(F0, Z1, e, ell);
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 2.2; ctx.beginPath();
+    for (var i = 0; i <= N; i++) {
+      var f = fa + (fb - fa) * i / N, gg = Math.min(1, gammaAt(f, Z1, e, ell));
+      if (i === 0) ctx.moveTo(X(f), Y(gg)); else ctx.lineTo(X(f), Y(gg));
+    }
+    ctx.stroke();
+
+    if (g0 <= GM) {
+      var step = 1e6, f1 = F0, f2 = F0;
+      while (f1 - step >= fa && gammaAt(f1 - step, Z1, e, ell) <= GM) f1 -= step;
+      while (f2 + step <= fb && gammaAt(f2 + step, Z1, e, ell) <= GM) f2 += step;
+      lo = f1; hi = f2;
+      ctx.fillStyle = "rgba(230,159,0,0.15)"; ctx.fillRect(X(lo), py1, X(hi) - X(lo), py0 - py1);
+    }
+
+    ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(X(F0), Y(Math.min(1, g0)), 4.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+
+    setText("qw-z1", Z1.toFixed(1)); setText("qw-ee", e.toFixed(2)); setText("qw-lam4", lam4.toFixed(1)); setText("qw-g0", g0.toFixed(2));
+    var zel = document.getElementById("qw-z1"); if (zel) zel.style.color = (Math.abs(Z1 - 70.71) < 1.0) ? ORANGE : "";
+    setText("qw-bwv", lo === null ? "없음 (2.4 GHz 에서 이미 0.2 초과)" : (lo / 1e9).toFixed(2) + " ~ " + (hi / 1e9).toFixed(2) + " GHz" + (lo <= fa + 1e6 || hi >= fb - 1e6 ? " (그래프 밖까지)" : ""));
+    var hint;
+    if (Math.abs(Z1 - 70.71) > 1.0) hint = Z1 > 70.71 ? "Z₁ 이 70.7 Ω 보다 큽니다 → 폭을 넓히세요" : "Z₁ 이 70.7 Ω 보다 작습니다 → 폭을 좁히세요";
+    else if (Math.abs(lmm - lam4) > 0.3) hint = lmm > lam4 ? "폭은 맞고 길이가 λ₁/4 보다 깁니다 → 골이 2.4 GHz 아래로" : "폭은 맞고 길이가 λ₁/4 보다 짧습니다 → 골이 2.4 GHz 위로";
+    else hint = "폭도 길이도 예제 A 의 값: 2.4 GHz 에서 |Γ| ≈ 0";
+    setText("qw-hint", hint);
+  }
+  function snap(v, q) { return Math.round(v / q) * q; }
+  sw.addEventListener("input", function () { wmm = snap(parseFloat(sw.value), 0.05); swv.textContent = wmm.toFixed(2); draw(); });
+  sl.addEventListener("input", function () { lmm = snap(parseFloat(sl.value), 0.1); slv.textContent = lmm.toFixed(1); draw(); });
+  sw.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  sl.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  draw();
+  window.addEventListener("load", draw);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>

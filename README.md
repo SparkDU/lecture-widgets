@@ -11,6 +11,11 @@
 | [게임: 숨은 전류 찾기 (암페어 주회법칙)](https://sparkdu.github.io/lecture-widgets/em2-ampere-hunt.html) | 전자기학 2 |
 | [가는 파, 오는 파, 그 합](https://sparkdu.github.io/lecture-widgets/mw2-standing-wave.html) | 초고주파공학 2 |
 | [스미스 차트: 점을 찍으면 Γ, SWR, Zin 이 나온다](https://sparkdu.github.io/lecture-widgets/mw2-smith-chart.html) | 초고주파공학 2 |
+| [도파관: 주파수를 바꾸며 차단을 넘어 보기](https://sparkdu.github.io/lecture-widgets/mw2-waveguide-cutoff.html) | 초고주파공학 2 |
+| [마이크로스트립: 선폭과 특성임피던스](https://sparkdu.github.io/lecture-widgets/mw2-microstrip.html) | 초고주파공학 2 |
+| [L형 정합: 병렬·직렬 소자로 점을 중심으로](https://sparkdu.github.io/lecture-widgets/mw2-lsection.html) | 초고주파공학 2 |
+| [스터브 정합: 위치와 길이로 점을 중심으로](https://sparkdu.github.io/lecture-widgets/mw2-stub.html) | 초고주파공학 2 |
+| [λ/4 변환기: 폭과 길이를 바꾸면 곡선이 움직인다](https://sparkdu.github.io/lecture-widgets/mw2-quarter-wave.html) | 초고주파공학 2 |
 | [게임: 숨은 부하 탐정 (정재파와 스미스 차트)](https://sparkdu.github.io/lecture-widgets/mw2-load-detective.html) | 초고주파공학 2 |
 
 ---
@@ -20,7 +25,7 @@
 ```
 Copyright © 2026 박상욱 (Sangwook Park)
 MAE Lab., Department of Electronic Engineering, Soonchunhyang University
-All rights reserved. 무단 전재·재배포 금지.
+All rights reserved. 무단 복제·배포를 금합니다.
 ```
 
 🔴 **이 저장소가 공개되어 있다고 해서 자유이용을 허락한 것이 아닙니다.**
