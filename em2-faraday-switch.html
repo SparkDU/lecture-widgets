@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 스위치를 닫는 순간 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 스위치를 닫는 순간</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="패러데이실험시뮬" width="1920" height="1080"
+        style="min-width:680px;width:100%;max-width:960px;cursor:pointer;touch-action:none"></canvas></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("패러데이실험시뮬");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#9b9b9b", INK = "#333333", LIGHT = "#e4e4e4", CORE = "#d9d9d9";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = "Arial, Helvetica, sans-serif";
+  var W = 960, H = 540, TWIN = 8.0;
+  var I0 = 1.0, TAU = 0.5, M = 0.1, RG = 10.0;
+
+  function physics(closed, t, Istart, I0, tau, M, RG) {
+    var e = Math.exp(-t / tau);
+    var I1 = closed ? I0 - (I0 - Istart) * e : Istart * e;
+    var dI1 = closed ? (I0 - Istart) / tau * e : -Istart / tau * e;
+    var emf = -M * dI1;
+    var iG = emf / RG;
+    I1 = Math.round(I1 * 100) / 100;
+    iG = Math.round(iG * 1e4) / 1e4;
+    if (Math.abs(iG) < 5e-5) iG = 0;
+    return { I1: I1, emf: Math.round(emf * 1000) / 1000, iG: iG };
+  }
+
+  var closed = true, tSw = 0, Istart = 0, t = 0, last = null, hist = [];
+
+  (function seed() {
+    var dt = 1 / 30;
+    for (var tt = -TWIN; tt < 0; tt += dt) {
+      var p = tt < -1.5 ? { I1: 0, emf: 0, iG: 0 } : physics(true, tt + 1.5, 0, I0, TAU, M, RG);
+      hist.push({ t: tt, I1: p.I1, iG: p.iG });
+    }
+    tSw = -1.5;
+  })();
+
+  function fmt(x, n) { var s = Math.abs(x).toFixed(n); return (x < 0 ? "−" : "") + s; }
+  function cur() { return physics(closed, t - tSw, Istart, I0, TAU, M, RG); }
+
+  function coil(cx, yc, n, col) {
+    for (var i = 0; i < n; i++) {
+      var y = yc + (i - (n - 1) / 2) * 16;
+      ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(cx, y, 36, 8, 0, Math.PI, 2 * Math.PI); ctx.stroke();
+      ctx.globalAlpha = 0.4; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cx, y, 36, 8, 0, 0, Math.PI); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  }
+  function drawCircuit(p) {
+    var cx = 200;
+    ctx.fillStyle = CORE; ctx.fillRect(cx - 26, 70, 52, 400); ctx.strokeStyle = "#666"; ctx.lineWidth = 1; ctx.strokeRect(cx - 26, 70, 52, 400);
+    ctx.fillStyle = "#555"; ctx.font = "17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("철심", cx, 270);
+    coil(cx, 170, 4, BLUE); coil(cx, 390, 4, ORANGE);
+    ctx.fillStyle = BLUE; ctx.font = "16px " + SANS; ctx.textAlign = "right"; ctx.fillText("코일 2", cx - 46, 170);
+    ctx.fillStyle = ORANGE; ctx.fillText("코일 1", cx - 46, 390);
+
+    var xr = 420;
+    ctx.strokeStyle = ORANGE; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx + 36, 414); ctx.lineTo(xr, 414); ctx.lineTo(xr, 372); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 36, 366); ctx.lineTo(xr, 366); ctx.lineTo(xr, 348); ctx.stroke();
+
+    ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(xr, 348, 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(xr, 372, 3.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xr, 348);
+    if (closed) ctx.lineTo(xr, 372); else ctx.lineTo(xr + 20, 366); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "15px " + SANS; ctx.textAlign = "left"; ctx.fillText(closed ? "스위치 닫힘 (클릭 → 열기)" : "스위치 열림 (클릭 → 닫기)", xr + 30, 360);
+
+    var bx = 320;
+    ctx.strokeStyle = ORANGE; ctx.lineWidth = 2; ctx.clearRect(bx - 12, 404, 24, 20);
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx - 6, 402); ctx.lineTo(bx - 6, 426); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bx + 6, 407); ctx.lineTo(bx + 6, 421); ctx.stroke();
+    ctx.fillStyle = ORANGE; ctx.font = "15px " + SANS; ctx.textAlign = "center"; ctx.fillText("전지", bx, 442);
+
+    if (p.I1 > 0.02) {
+      var L = 20 + 60 * p.I1 / I0;
+      ctx.strokeStyle = ORANGE; ctx.fillStyle = ORANGE; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(250, 440); ctx.lineTo(250 + L, 440); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(250 + L, 440); ctx.lineTo(250 + L - 9, 435); ctx.lineTo(250 + L - 9, 445); ctx.closePath(); ctx.fill();
+      ctx.font = "italic 17px " + SERIF; ctx.textAlign = "left"; ctx.fillText("I", 250, 460); ctx.font = "italic 11px " + SERIF; ctx.fillText("1", 256, 466);
+    }
+
+    var gx = 420, gy = 170;
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx + 36, 146); ctx.lineTo(gx, 146); ctx.lineTo(gx, gy - 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 36, 194); ctx.lineTo(gx, 194); ctx.lineTo(gx, gy + 44); ctx.stroke();
+    ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(gx, gy, 44, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+
+    ctx.strokeStyle = GREY; ctx.lineWidth = 1;
+    for (var k = -2; k <= 2; k++) {
+      var a = -Math.PI / 2 + k * Math.PI / 6;
+      ctx.beginPath(); ctx.moveTo(gx + 30 * Math.cos(a), gy + 30 * Math.sin(a)); ctx.lineTo(gx + 36 * Math.cos(a), gy + 36 * Math.sin(a)); ctx.stroke();
+    }
+    var ang = -Math.PI / 2 + Math.max(-1, Math.min(1, p.iG / 0.02)) * Math.PI / 3;
+    ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(gx, gy + 8); ctx.lineTo(gx + 34 * Math.cos(ang), gy + 34 * Math.sin(ang)); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "15px " + SANS; ctx.textAlign = "center"; ctx.fillText("G", gx, gy + 24);
+    ctx.textAlign = "left"; ctx.fillText("전류계  " + fmt(p.iG * 1000, 1) + " mA", gx + 54, gy);
+    ctx.fillStyle = INK; ctx.font = "17px " + SANS; ctx.fillText("스위치를 클릭해 보세요", 60, 40);
+  }
+  function chart(x, y, w, h, key, label, unit, lo, hi, col, scale) {
+    ctx.fillStyle = "white"; ctx.fillRect(x, y, w, h); ctx.strokeStyle = LIGHT; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+    var y0 = y + h - (0 - lo) / (hi - lo) * h;
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + w, y0); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "16px " + SANS; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(hi.toFixed(hi < 1 ? 2 : 0), x - 6, y + 8); ctx.fillText("0", x - 6, y0); if (lo < 0) ctx.fillText(fmt(lo, 0), x - 6, y + h - 8);
+    ctx.textAlign = "left"; ctx.fillText(label + " (" + unit + ")   시간 →  지난 8 s", x, y - 14);
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); var first = true;
+    for (var i = 0; i < hist.length; i++) {
+      var px = x + w + (hist[i].t - t) / TWIN * w, val = hist[i][key] * scale;
+      if (px < x) continue;
+      var py = y + h - (val - lo) / (hi - lo) * h; py = Math.max(y, Math.min(y + h, py));
+      if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.clearRect(0, 0, W, H);
+    var p = cur();
+    drawCircuit(p);
+    chart(625, 80, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1);
+    chart(625, 300, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
+
+    var ry = 490; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.font = "20px " + SANS; ctx.fillText("emf₂ = −", 625, ry);
+    ctx.font = "italic 20px " + SERIF; ctx.fillText("M", 712, ry);
+    ctx.font = "20px " + SANS; ctx.fillText("dI₁/dt = " + fmt(p.emf, 3) + " V", 736, ry);
+    ctx.fillText("전류계 = emf₂ / R = " + fmt(p.iG * 1000, 1) + " mA", 625, ry + 30);
+    ctx.font = "16px " + SANS; ctx.fillStyle = "#555"; ctx.fillText("전류가 변하는 동안만 바늘이 움직인다. 일정하면 0", 625, ry + 58);
+  }
+  function step(now) {
+    if (last === null) last = now;
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt; var p = cur(); hist.push({ t: t, I1: p.I1, iG: p.iG });
+    while (hist.length && hist[0].t < t - TWIN) hist.shift();
+    draw(); requestAnimationFrame(step);
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    var r = cv.getBoundingClientRect(); var qx = (e.clientX - r.left) / r.width * W, qy = (e.clientY - r.top) / r.height * H;
+    if (qx > 380 && qx < 640 && qy > 320 && qy < 400) { Istart = cur().I1; closed = !closed; tSw = t; e.preventDefault(); }
+  });
+  draw(); requestAnimationFrame(step);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
