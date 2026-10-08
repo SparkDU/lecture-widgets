@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 막대를 끌면 전압이 나온다 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 막대를 끌면 전압이 나온다</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="패러데이시뮬" width="1920" height="1080"
+        style="min-width:680px;width:100%;max-width:960px;cursor:grab;touch-action:none"></canvas></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("패러데이시뮬");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#9b9b9b", INK = "#333333", LIGHT = "#e4e4e4", PALE = "#FDEBC8";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = "Arial, Helvetica, sans-serif";
+  var W = 960, H = 540;
+  var D_M = 0.2, Y_MIN = 0.05, Y_MAX = 1.0;
+  var X0 = 80, XW = 400;
+  var RT = 150, RB = 330;
+  var TWIN = 8.0;
+
+  function physics(B, d, y0, y1, dt) {
+    var v = dt > 0 ? Math.round(((y1 - y0) / dt) * 100) / 100 : 0;
+    if (Math.abs(v) < 0.005) v = 0;
+    var phi = B * d * y1;
+    var emf = -B * v * d;
+    if (Math.abs(emf) < 5e-5) emf = 0;
+    return { v: v, phi: phi, emf: emf, plus: emf < 0 ? 2 : (emf > 0 ? 1 : 0) };
+  }
+
+  var B = 0.5, y = 0.4, vState = 0, auto = false, dragging = false, dragOff = 0, sliderDrag = false;
+  var hist = [];
+  var t = 0, last = null;
+
+  (function seed() {
+    var dt = 1 / 30;
+    for (var tt = -TWIN; tt < 0; tt += dt) {
+      var yy = tt < -4 ? 0.1 : (tt < -2.8 ? 0.1 + 0.25 * (tt + 4) : 0.4);
+      var yp = tt - dt < -4 ? 0.1 : (tt - dt < -2.8 ? 0.1 + 0.25 * (tt - dt + 4) : 0.4);
+      var p = physics(B, D_M, yp, yy, dt);
+      hist.push({ t: tt, phi: p.phi, emf: p.emf });
+    }
+  })();
+
+  function fmt(x, n) { var s = Math.abs(x).toFixed(n); return (x < 0 ? "−" : "") + s; }
+  function barX() { return X0 + y * XW; }
+
+  function drawCircuit(p) {
+
+    ctx.fillStyle = PALE; ctx.fillRect(X0, RT, barX() - X0, RB - RT);
+
+    var dot = B >= 0;
+    ctx.strokeStyle = GREY; ctx.fillStyle = GREY; ctx.lineWidth = 1.6;
+    for (var gx = X0 + 30; gx < X0 + XW + 40; gx += 50) {
+      for (var gy = RT + 45; gy < RB; gy += 90) {
+        ctx.beginPath(); ctx.arc(gx, gy, 7, 0, 2 * Math.PI); ctx.stroke();
+        if (dot) { ctx.beginPath(); ctx.arc(gx, gy, 2.2, 0, 2 * Math.PI); ctx.fill(); }
+        else { ctx.beginPath(); ctx.moveTo(gx - 4, gy - 4); ctx.lineTo(gx + 4, gy + 4); ctx.moveTo(gx - 4, gy + 4); ctx.lineTo(gx + 4, gy - 4); ctx.stroke(); }
+      }
+    }
+
+    ctx.strokeStyle = INK; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(X0, RT); ctx.lineTo(X0 + XW + 50, RT); ctx.moveTo(X0, RB); ctx.lineTo(X0 + XW + 50, RB); ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X0, RT); ctx.lineTo(40, RT); ctx.lineTo(40, 215); ctx.moveTo(X0, RB); ctx.lineTo(40, RB); ctx.lineTo(40, 265); ctx.stroke();
+    ctx.beginPath(); ctx.arc(40, 240, 25, 0, 2 * Math.PI); ctx.fillStyle = "white"; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "20px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("V", 40, 241);
+    ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(X0, RT, 5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X0, RB, 5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "19px " + SANS; ctx.fillText("1", 22, RT - 14); ctx.fillText("2", 22, RB + 16);
+
+    if (p.plus) {
+      ctx.fillStyle = ORANGE; ctx.font = "bold 24px " + SANS;
+      ctx.fillText("+", 62, p.plus === 2 ? RB + 20 : RT - 18);
+    }
+
+    var bx = barX();
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 9; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(bx, RT - 16); ctx.lineTo(bx, RB + 16); ctx.stroke(); ctx.lineCap = "butt";
+
+    if (p.v !== 0) {
+      var dir = p.v > 0 ? 1 : -1, L = Math.min(90, 40 + 200 * Math.abs(p.v));
+      arrow(bx + dir * 14, 240, bx + dir * (14 + L), 240, BLUE, 3);
+    }
+
+    if (p.v !== 0) {
+      var s = (p.v > 0 ? 1 : -1) * (B >= 0 ? 1 : -1);
+      for (var k = 0; k < 3; k++) {
+        var cy = RT + 30 + k * 60;
+        arrow(bx, cy - s * 14, bx, cy + s * 14, ORANGE, 3);
+      }
+      ctx.fillStyle = ORANGE; ctx.font = "italic 20px " + SERIF; ctx.textAlign = "left";
+      ctx.fillText("E", bx + 14, RT + 22); ctx.font = "italic 13px " + SERIF; ctx.fillText("m", bx + 27, RT + 29);
+    }
+
+    ctx.strokeStyle = GREY; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(X0, 372); ctx.lineTo(bx, 372); ctx.moveTo(X0, 365); ctx.lineTo(X0, 379); ctx.moveTo(bx, 365); ctx.lineTo(bx, 379); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "italic 20px " + SERIF; ctx.textAlign = "center"; ctx.fillText("y", (X0 + bx) / 2 - 36, 394);
+    ctx.font = "20px " + SANS; ctx.textAlign = "left"; ctx.fillText("= " + y.toFixed(2) + " m", (X0 + bx) / 2 - 24, 394);
+    ctx.beginPath(); ctx.moveTo(X0 + XW + 36, RT); ctx.lineTo(X0 + XW + 36, RB); ctx.stroke();
+    ctx.textAlign = "center"; ctx.font = "italic 20px " + SERIF; ctx.fillText("d", X0 + XW + 20, 352); ctx.font = "20px " + SANS; ctx.fillText("= 0.2 m", X0 + XW + 62, 352); ctx.textAlign = "left";
+
+    ctx.fillStyle = INK; ctx.font = "19px " + SANS; ctx.textAlign = "left";
+    ctx.fillText("막대를 좌우로 끌어 보세요. 멈추면 전압도 멈춥니다", X0, 120);
+  }
+
+  function arrow(x0, y0, x1, y1, col, lw) {
+    var ang = Math.atan2(y1 - y0, x1 - x0), hl = 12;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - hl * Math.cos(ang - 0.45), y1 - hl * Math.sin(ang - 0.45));
+    ctx.lineTo(x1 - hl * Math.cos(ang + 0.45), y1 - hl * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+  }
+
+  function drawControls() {
+
+    var sx = X0, sw = 240, sy = 455;
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 8; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + sw, sy); ctx.stroke(); ctx.lineCap = "butt";
+    var kx = sx + Math.abs(B) * sw;
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(kx, sy, 11, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = INK; ctx.font = "italic 20px " + SERIF; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText("B", sx, sy - 30); ctx.font = "20px " + SANS; ctx.fillText("= " + Math.abs(B).toFixed(1) + " T  (" + (B >= 0 ? "⊙ 화면 밖" : "⊗ 화면 안") + ")", sx + 20, sy - 30);
+
+    button(sx + 290, 440, 180, 36, B >= 0 ? "B 방향 뒤집기 (⊙ → ⊗)" : "B 방향 되돌리기 (⊗ → ⊙)");
+    button(sx + 290, 486, 180, 36, auto ? "■ 멈춤" : "▶ 0.25 m/s 로 밀기");
+  }
+  function button(x, y, w, h, label) {
+    ctx.fillStyle = "white"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  }
+
+  function drawCharts(p) {
+    var gx = 625, gw = 265;
+    chart(gx, 70, gw, 160, "phi", "Φ", "Wb", 0.0, 0.12);
+    chart(gx, 300, gw, 160, "emf", "emf", "V", -0.06, 0.06);
+
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    var ry = 492;
+    ctx.fillStyle = INK; ctx.font = "22px " + SANS; ctx.fillText("emf = −", gx, ry);
+    ctx.font = "italic 22px " + SERIF; ctx.fillText("B v d", gx + 88, ry);
+    ctx.font = "22px " + SANS;
+    ctx.fillText("= −(" + Math.abs(B).toFixed(1) + ")(" + fmt(p.v, 2) + ")(0.2) = " + fmt(p.emf, 3) + " V", gx + 30, ry + 32);
+  }
+  function chart(x, y, w, h, key, sym, unit, lo, hi) {
+    ctx.fillStyle = "white"; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+    var y0 = y + h - (0 - lo) / (hi - lo) * h;
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + w, y0); ctx.stroke();
+    ctx.fillStyle = INK; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.font = "16px " + SANS;
+    ctx.fillText(hi.toFixed(2), x - 6, y + 8); ctx.fillText("0", x - 6, y0); if (lo < 0) ctx.fillText(fmt(lo, 2), x - 6, y + h - 8);
+    ctx.textAlign = "left"; ctx.font = (key === "emf" ? "" : "italic ") + "20px " + SERIF; ctx.fillText(sym, x, y - 14);
+    ctx.font = "16px " + SANS; ctx.fillText("(" + unit + ")   시간 →  지난 8 s", x + (key === "emf" ? 44 : 26), y - 14);
+    ctx.strokeStyle = key === "emf" ? ORANGE : BLUE; ctx.lineWidth = 3; ctx.beginPath();
+    var first = true;
+    for (var i = 0; i < hist.length; i++) {
+      var px = x + w + (hist[i].t - t) / TWIN * w, val = hist[i][key];
+      if (px < x) continue;
+      var py = y + h - (val - lo) / (hi - lo) * h; py = Math.max(y, Math.min(y + h, py));
+      if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    var cur = hist.length ? hist[hist.length - 1][key] : 0;
+    ctx.fillStyle = key === "emf" ? ORANGE : BLUE; ctx.font = "20px " + SANS; ctx.textAlign = "right";
+    ctx.fillText("지금 " + fmt(cur, 3) + " " + unit, x + w - 6, y + 14);
+  }
+
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var p = hist.length ? { v: vState, phi: hist[hist.length - 1].phi, emf: hist[hist.length - 1].emf } : physics(B, D_M, y, y, 1);
+    p.plus = p.emf < 0 ? 2 : (p.emf > 0 ? 1 : 0);
+    drawCircuit(p); drawControls(); drawCharts(p);
+  }
+
+  function step(now) {
+    if (last === null) last = now;
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (dt > 0) {
+      var y0 = y;
+      if (auto) { y = Math.min(Y_MAX, y + 0.25 * dt); if (y >= Y_MAX) auto = false; }
+      var p = physics(B, D_M, y0, y, dt);
+      vState = p.v; t += dt;
+      hist.push({ t: t, phi: p.phi, emf: p.emf });
+      while (hist.length && hist[0].t < t - TWIN) hist.shift();
+    }
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  function pos(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+  function snapB(px) { var b = Math.round(Math.max(0, Math.min(1, (px - X0) / 240)) * 10) / 10; B = (B >= 0 ? 1 : -1) * b; }
+  cv.addEventListener("pointerdown", function (e) {
+    var q = pos(e); e.preventDefault();
+    if (q.x >= X0 + 290 && q.x <= X0 + 470 && q.y >= 440 && q.y <= 476) { B = -B; draw(); return; }
+    if (q.x >= X0 + 290 && q.x <= X0 + 470 && q.y >= 486 && q.y <= 522) { auto = !auto; if (auto && y >= Y_MAX - 1e-9) y = Y_MIN; draw(); return; }
+    if (Math.abs(q.y - 455) < 18 && q.x >= X0 - 12 && q.x <= X0 + 252) { sliderDrag = true; snapB(q.x); draw(); return; }
+    if (Math.abs(q.x - barX()) < 28 && q.y > RT - 30 && q.y < RB + 30) { dragging = true; auto = false; dragOff = q.x - barX(); cv.setPointerCapture(e.pointerId); }
+  });
+  cv.addEventListener("pointermove", function (e) {
+    var q = pos(e);
+    if (sliderDrag) { snapB(q.x); draw(); return; }
+    if (!dragging) return;
+    y = Math.max(Y_MIN, Math.min(Y_MAX, (q.x - dragOff - X0) / XW));
+  });
+  window.addEventListener("pointerup", function () { dragging = false; sliderDrag = false; });
+
+  draw();
+  requestAnimationFrame(step);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
