@@ -20,6 +20,7 @@
 | [스터브 정합: 위치와 길이로 점을 중심으로](https://sparkdu.github.io/lecture-widgets/mw2-stub.html) | 초고주파공학 2 |
 | [λ/4 변환기: 폭과 길이를 바꾸면 곡선이 움직인다](https://sparkdu.github.io/lecture-widgets/mw2-quarter-wave.html) | 초고주파공학 2 |
 | [게임: 숨은 부하 탐정 (정재파와 스미스 차트)](https://sparkdu.github.io/lecture-widgets/mw2-load-detective.html) | 초고주파공학 2 |
+| [결합기 응답: 결합량과 짝·홀 속도 차를 바꾸면 네 곡선이 움직인다](https://sparkdu.github.io/lecture-widgets/lab-coupler.html) | 응용마이크로파공학실습 |
 
 ---
 

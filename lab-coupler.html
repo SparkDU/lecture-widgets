@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>움직여 보기: 결합량과 짝·홀 속도 차 · 응용마이크로파공학실습</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>움직여 보기: 결합량과 짝·홀 속도 차</h1>
+<div class="과목">응용마이크로파공학실습</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div id="coupbox" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px;max-width:1080px;margin:0 auto">
+<div class="캔버스틀"><canvas id="coupsim" width="1120" height="760"
+        style="min-width:680px;flex:1 1 380px;max-width:560px;width:100%;touch-action:none"></canvas></div>
+<div style="flex:1 1 300px;text-align:left;line-height:1.5;font-size:max(0.9em, 20px)">
+<div style="font-size:0.72em;color:#666">2.4 GHz (λ/4) 에서</div>
+<div><math><mrow><mo>|</mo><msub><mi>S</mi><mn>31</mn></msub><mo>|</mo></mrow><mo>=</mo><mi>C</mi><mo>=</mo><mn id="cp-c">0.316</mn><mtext>&#x2009;(</mtext><mn id="cp-cdb">&#x2212;10.0</mn><mtext>&#x2009;dB)</mtext></math></div>
+<div><math><mrow><mo>|</mo><msub><mi>S</mi><mn>21</mn></msub><mo>|</mo></mrow><mo>=</mo><msqrt><mn>1</mn><mo>&#x2212;</mo><msup><mi>C</mi><mn>2</mn></msup></msqrt><mo>=</mo><mn id="cp-s21">0.949</mn><mtext>&#x2009;(</mtext><mn id="cp-s21db">&#x2212;0.46</mn><mtext>&#x2009;dB)</mtext></math></div>
+<div><math><mrow><mo>|</mo><msub><mi>S</mi><mn>41</mn></msub><mo>|</mo></mrow><mo>=</mo><mn id="cp-s41db">0</mn><mtext>&#x2009;</mtext><mtext id="cp-s41u">(바닥)</mtext></math></div>
+<div><math><mi>D</mi><mo>=</mo><mn id="cp-d">&#x221E;</mn><mtext>&#x2009;dB</mtext></math> <span style="font-size:0.72em;color:#666">방향성</span></div>
+<div><math><mo>&#x2220;</mo><msub><mi>S</mi><mn>21</mn></msub><mo>&#x2212;</mo><mo>&#x2220;</mo><msub><mi>S</mi><mn>31</mn></msub><mo>=</mo><mn id="cp-ph">&#x2212;90</mn><mo>&#xB0;</mo></math></div>
+<div style="font-size:0.72em;color:#666;margin-top:0.3em"><math><msub><mi>Z</mi><mrow><mn>0</mn><mi>e</mi></mrow></msub><mo>=</mo><mn id="cp-ze">69.4</mn><mtext>&#x2009;&#x3A9;</mtext></math> · <math><msub><mi>Z</mi><mrow><mn>0</mn><mi>o</mi></mrow></msub><mo>=</mo><mn id="cp-zo">36.0</mn><mtext>&#x2009;&#x3A9;</mtext></math></div>
+<div id="cp-hint" style="font-size:0.62em;color:#666;margin-top:0.5em">속도 차 0: 반사·격리가 모든 주파수에서 0 (이상 모델)</div>
+</div>
+</div>
+<div style="max-width:900px;margin:0.4em auto 0;font-size:0.72em;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<span style="white-space:nowrap">결합량 (dB)</span>
+<input id="coupc" type="range" min="3" max="30" step="1" value="10" style="flex:1 1 120px">
+<span id="coupcv" style="width:2.2em;text-align:left">10</span>
+<span style="white-space:nowrap;margin-left:10px">짝·홀 속도 차 (%)</span>
+<input id="coupd" type="range" min="0" max="20" step="1" value="0" style="flex:1 1 120px">
+<span id="coupdv" style="width:2.2em;text-align:left">0</span>
+</div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("coupsim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var sC = document.getElementById("coupc"), sCv = document.getElementById("coupcv");
+  var sD = document.getElementById("coupd"), sDv = document.getElementById("coupdv");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#999999", INK = "#222222";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  var W = 560, H = 380;
+  var Z0 = 50, F0 = 2.4, FMIN = 0.3, FMAX = 4.8, DBMIN = -40;
+  var cdb = 10, dpct = 0;
+
+  function cadd(x, y) { return [x[0] + y[0], x[1] + y[1]]; }
+  function csub(x, y) { return [x[0] - y[0], x[1] - y[1]]; }
+  function cmul(x, y) { return [x[0] * y[0] - x[1] * y[1], x[0] * y[1] + x[1] * y[0]]; }
+  function cdiv(x, y) { var d = y[0] * y[0] + y[1] * y[1]; return [(x[0] * y[0] + x[1] * y[1]) / d, (x[1] * y[0] - x[0] * y[1]) / d]; }
+  function cabs(x) { return Math.sqrt(x[0] * x[0] + x[1] * x[1]); }
+  function carg(x) { return Math.atan2(x[1], x[0]); }
+  function cexp(th) { return [Math.cos(th), Math.sin(th)]; }
+
+  function mode(Zm, th) {
+    var c = Math.cos(th), s = Math.sin(th);
+    var Zin = cdiv([Zm * Z0 * c, Zm * Zm * s], [Zm * c, Z0 * s]);
+    var V1 = cdiv(Zin, cadd(Zin, [Z0, 0]));
+    var G = (Z0 - Zm) / (Z0 + Zm);
+    var den = cadd(cexp(th), cmul([G, 0], cexp(-th)));
+    var V2 = cdiv(cmul(V1, [1 + G, 0]), den);
+    return [V1, V2];
+  }
+
+  function sparams(Ze, Zo, th, d) {
+    var e = mode(Ze, th * (1 + d / 2)), o = mode(Zo, th * (1 - d / 2));
+    return { S11: csub(cadd(e[0], o[0]), [1, 0]), S21: cadd(e[1], o[1]), S31: csub(e[0], o[0]), S41: csub(e[1], o[1]) };
+  }
+  function dB(x) { var m = cabs(x); return m < 1e-9 ? -999 : 20 * Math.log10(m); }
+  function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
+  function runs(parts, x, y) {
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i]; ctx.font = p[1]; ctx.fillStyle = p[2] || INK;
+      ctx.fillText(p[0], x, y); x += ctx.measureText(p[0]).width;
+    }
+    return x;
+  }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var C = Math.pow(10, -cdb / 20), d = dpct / 100;
+    var Ze = Z0 * Math.sqrt((1 + C) / (1 - C)), Zo = Z0 * Math.sqrt((1 - C) / (1 + C));
+
+    var X0 = 58, X1 = 540, Y0 = 22, Y1 = 318;
+    function px(f) { return X0 + (f - FMIN) / (FMAX - FMIN) * (X1 - X0); }
+    function py(db) { return Y1 - (Math.max(db, DBMIN) - DBMIN) / (0 - DBMIN) * (Y1 - Y0); }
+    ctx.strokeStyle = "#cccccc"; ctx.lineWidth = 0.6;
+    for (var g = 0; g >= DBMIN; g -= 10) { ctx.beginPath(); ctx.moveTo(X0, py(g)); ctx.lineTo(X1, py(g)); ctx.stroke(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
+    ctx.font = "12px " + SANS; ctx.fillStyle = "#555"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (g = 0; g >= DBMIN; g -= 10) ctx.fillText(g, X0 - 6, py(g));
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (var f = 0.5; f <= 4.6; f += 0.5) ctx.fillText(f.toFixed(1), px(f), Y1 + 5);
+    ctx.fillText("주파수 (GHz)", (X0 + X1) / 2, Y1 + 22);
+    ctx.save(); ctx.translate(14, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle"; ctx.fillText("크기 (dB)", 0, 0); ctx.restore();
+
+    ctx.strokeStyle = GREY; ctx.lineWidth = 0.8; ctx.setLineDash([2, 3]);
+    [F0, 2 * F0].forEach(function (ff) { ctx.beginPath(); ctx.moveTo(px(ff), Y0); ctx.lineTo(px(ff), Y1); ctx.stroke(); });
+    ctx.setLineDash([]);
+    ctx.font = "11px " + SANS; ctx.fillStyle = GREY; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+    ctx.fillText("2.4 GHz (λ/4)", px(F0) + 4, Y1 - 4);
+    ctx.textAlign = "right"; ctx.fillText("4.8 GHz (λ/2)", px(2 * F0) - 4, Y1 - 4);
+
+    var N = 241, keys = ["S21", "S31", "S41", "S11"];
+    var style = { S21: [BLUE, 2.2, []], S31: [ORANGE, 2.2, [7, 4]], S41: [GREY, 1.8, [2, 3]], S11: [INK, 1.1, [6, 3, 1, 3]] };
+    keys.forEach(function (k) {
+      ctx.strokeStyle = style[k][0]; ctx.lineWidth = style[k][1]; ctx.setLineDash(style[k][2]);
+      ctx.beginPath(); var started = false;
+      for (var i = 0; i < N; i++) {
+        var ff = FMIN + (FMAX - FMIN) * i / (N - 1);
+        var th = Math.PI / 2 * ff / F0;
+        var v = dB(sparams(Ze, Zo, th, d)[k]);
+        if (v < DBMIN - 0.5) { started = false; continue; }
+        var x = px(ff), y = py(v);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    var lx = 395, ly = 236, names = { S21: "통과 |S21|", S31: "결합 |S31|", S41: "격리 |S41|", S11: "반사 |S11|" };
+    ctx.font = "12px " + SANS; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    keys.forEach(function (k, i) {
+      var y = ly + i * 17;
+      ctx.strokeStyle = style[k][0]; ctx.lineWidth = style[k][1]; ctx.setLineDash(style[k][2]);
+      ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx + 30, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = INK; ctx.fillText(names[k], lx + 36, y);
+    });
+
+    var s0 = sparams(Ze, Zo, Math.PI / 2, d);
+    var s31 = cabs(s0.S31), s21 = cabs(s0.S21), s41db = dB(s0.S41);
+    setText("cp-c", s31.toFixed(3)); setText("cp-cdb", (dB(s0.S31)).toFixed(1).replace("-", "−"));
+    setText("cp-s21", s21.toFixed(3)); setText("cp-s21db", dB(s0.S21).toFixed(2).replace("-", "−"));
+    var floor = s41db < -59;
+    setText("cp-s41db", floor ? "0" : s41db.toFixed(1).replace("-", "−")); setText("cp-s41u", floor ? "(바닥)" : "dB");
+    var D = floor ? "∞" : (dB(s0.S31) - s41db).toFixed(1);
+    setText("cp-d", D);
+    var ph = (carg(s0.S21) - carg(s0.S31)) * 180 / Math.PI; ph = ((ph + 540) % 360) - 180;
+    setText("cp-ph", Math.round(ph).toString().replace("-", "−"));
+    setText("cp-ze", Ze.toFixed(1)); setText("cp-zo", Zo.toFixed(1));
+    setText("cp-hint", d === 0 ? "속도 차 0: 반사·격리가 모든 주파수에서 0 (이상 모델)"
+                               : "두 모드가 포트 4 에 다른 위상으로 도착 → 격리가 깨지고 방향성 D 가 유한 (실물 마이크로스트립)");
+  }
+  sC.addEventListener("input", function () { cdb = Math.round(parseFloat(sC.value)); sCv.textContent = cdb; draw(); });
+  sD.addEventListener("input", function () { dpct = Math.round(parseFloat(sD.value)); sDv.textContent = dpct; draw(); });
+  sC.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  sD.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  draw();
+  window.addEventListener("load", draw);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
