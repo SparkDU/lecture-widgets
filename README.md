@@ -9,6 +9,7 @@
 | [단위벡터가 자리마다 다르다](https://sparkdu.github.io/lecture-widgets/em2-polar.html) | 전자기학 2 |
 | [비오-사바르: 점을 찍으면 자계가 나온다](https://sparkdu.github.io/lecture-widgets/em2-biot-savart.html) | 전자기학 2 |
 | [게임: 숨은 전류 찾기 (암페어 주회법칙)](https://sparkdu.github.io/lecture-widgets/em2-ampere-hunt.html) | 전자기학 2 |
+| [자계 속에서 전하는 원을 돈다 (자기력)](https://sparkdu.github.io/lecture-widgets/em2-charge-orbit.html) | 전자기학 2 |
 | [경계면에서 B 가 꺾인다 (경계조건)](https://sparkdu.github.io/lecture-widgets/em2-refraction.html) | 전자기학 2 |
 | [막대를 끌면 전압이 나온다 (패러데이 법칙)](https://sparkdu.github.io/lecture-widgets/em2-faraday.html) | 전자기학 2 |
 | [스위치를 닫는 순간: 전류계가 흔들린다 (패러데이 실험)](https://sparkdu.github.io/lecture-widgets/em2-faraday-switch.html) | 전자기학 2 |

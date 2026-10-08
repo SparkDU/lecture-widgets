@@ -101,13 +101,15 @@
 
     var xr = 420;
     ctx.strokeStyle = ORANGE; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(cx + 36, 414); ctx.lineTo(xr, 414); ctx.lineTo(xr, 372); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + 36, 366); ctx.lineTo(xr, 366); ctx.lineTo(xr, 348); ctx.stroke();
 
-    ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(xr, 348, 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(xr, 372, 3.5, 0, 2 * Math.PI); ctx.fill();
-    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xr, 348);
-    if (closed) ctx.lineTo(xr, 372); else ctx.lineTo(xr + 20, 366); ctx.stroke();
-    ctx.fillStyle = INK; ctx.font = "15px " + SANS; ctx.textAlign = "left"; ctx.fillText(closed ? "스위치 닫힘 (클릭 → 열기)" : "스위치 열림 (클릭 → 닫기)", xr + 30, 360);
+    ctx.beginPath(); ctx.moveTo(cx + 36, 366); ctx.lineTo(xr, 366); ctx.lineTo(xr, 376); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 36, 414); ctx.lineTo(xr, 414); ctx.lineTo(xr, 404); ctx.stroke();
+
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xr, 376);
+    if (closed) ctx.lineTo(xr, 404); else ctx.lineTo(xr + 20, 396); ctx.stroke();
+    ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(xr, 376, 3.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.lineWidth = 2; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(xr, 404, 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "15px " + SANS; ctx.textAlign = "left"; ctx.fillText(closed ? "스위치 닫힘 (클릭 → 열기)" : "스위치 열림 (클릭 → 닫기)", xr + 30, 390);
 
     var bx = 320;
     ctx.strokeStyle = ORANGE; ctx.lineWidth = 2; ctx.clearRect(bx - 12, 404, 24, 20);
@@ -118,9 +120,9 @@
     if (p.I1 > 0.02) {
       var L = 20 + 60 * p.I1 / I0;
       ctx.strokeStyle = ORANGE; ctx.fillStyle = ORANGE; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(250, 440); ctx.lineTo(250 + L, 440); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(250 + L, 440); ctx.lineTo(250 + L - 9, 435); ctx.lineTo(250 + L - 9, 445); ctx.closePath(); ctx.fill();
-      ctx.font = "italic 17px " + SERIF; ctx.textAlign = "left"; ctx.fillText("I", 250, 460); ctx.font = "italic 11px " + SERIF; ctx.fillText("1", 256, 466);
+      ctx.beginPath(); ctx.moveTo(262, 470); ctx.lineTo(262 + L, 470); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(262 + L, 470); ctx.lineTo(262 + L - 9, 465); ctx.lineTo(262 + L - 9, 475); ctx.closePath(); ctx.fill();
+      ctx.font = "italic 17px " + SERIF; ctx.textAlign = "right"; ctx.fillText("I", 248, 470); ctx.font = "italic 11px " + SERIF; ctx.textAlign = "left"; ctx.fillText("1", 249, 476);
     }
 
     var gx = 420, gy = 170;
@@ -163,7 +165,7 @@
     chart(625, 80, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1);
     chart(625, 300, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
 
-    var ry = 490; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    var ry = 472; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.font = "20px " + SANS; ctx.fillText("emf₂ = −", 625, ry);
     ctx.font = "italic 20px " + SERIF; ctx.fillText("M", 712, ry);
     ctx.font = "20px " + SANS; ctx.fillText("dI₁/dt = " + fmt(p.emf, 3) + " V", 736, ry);

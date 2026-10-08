@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 자계 속에서 전하는 원을 돈다 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 자계 속에서 전하는 원을 돈다</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="전하궤적시뮬" width="1920" height="1080"
+        style="min-width:680px;width:100%;max-width:960px;cursor:crosshair;touch-action:none"></canvas></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("전하궤적시뮬");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#9b9b9b", INK = "#333333", LIGHT = "#e4e4e4", PALE = "#eef3f8", TRAIL = "#6a6a6a";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = "Arial, Helvetica, sans-serif";
+  var W = 960, H = 540;
+  var FX = 40, FY = 60, FW = 520, FH = 430;
+  var CX = FX + FW / 2, CY = FY + FH / 2, S = 8000;
+  var E_C = 1.602e-19, M_E = 9.109e-31;
+  var E_ON = 500;
+  var SLOW = 2e-8;
+  var PXV = 100;
+  var VMIN = 0.3e6, VMAX = 2.0e6;
+
+  function physics(q, m, B, E, x, y, vx, vy, dt) {
+    var w = q * B / m, ux = E / B;
+    var wx = vx - ux, wy = vy;
+    var c = Math.cos(w * dt), s = Math.sin(w * dt);
+    var nwx = wx * c + wy * s, nwy = -wx * s + wy * c;
+    var nx = x + ux * dt + (wx * s + wy * (1 - c)) / w;
+    var ny = y + (wx * (c - 1) + wy * s) / w;
+    return { x: nx, y: ny, vx: nwx + ux, vy: nwy };
+  }
+
+  function orbit(q, m, B, v) {
+    return { r: m * v / (Math.abs(q) * Math.abs(B)), T: 2 * Math.PI * m / (Math.abs(q) * Math.abs(B)) };
+  }
+
+  var q = -E_C, Bmt = 1.0, Eon = false;
+  var st = { x: 0, y: 0, vx: 0, vy: 0 }, alive = false, trail = [], vdisp = 0, launchA = 0;
+  var aim = null, drag = null, last = null;
+  function Bsi() { return Bmt * 1e-3; }
+  function Esi() { return Eon ? E_ON : 0; }
+  function sx(x) { return CX + x * S; }
+  function sy(y) { return CY - y * S; }
+  function inField(x, y) { return Math.abs(x) * S < FW / 2 - 6 && Math.abs(y) * S < FH / 2 - 6; }
+
+  function launch(x0, y0, vx0, vy0) {
+    var v = Math.hypot(vx0, vy0); if (v < 1e-3) return;
+    v = Math.max(VMIN, Math.min(VMAX, v));
+    v = Math.round(v / 1e4) * 1e4;
+    var a = Math.atan2(vy0, vx0);
+    st = { x: x0, y: y0, vx: v * Math.cos(a), vy: v * Math.sin(a) };
+    vdisp = v; launchA = a; alive = true; trail = [{ x: x0, y: y0 }];
+  }
+
+  (function seed() {
+    var o = orbit(q, M_E, Bsi(), 1.5e6);
+    launch(0, -o.r, 1.5e6, 0);
+    var n = 120, dt = o.T * 1.05 / n;
+    for (var i = 0; i < n; i++) { st = physics(q, M_E, Bsi(), 0, st.x, st.y, st.vx, st.vy, dt); trail.push({ x: st.x, y: st.y }); }
+  })();
+
+  function fmt(x, n) { var s = Math.abs(x).toFixed(n); return (x < 0 ? "−" : "") + s; }
+  function arrow(x0, y0, x1, y1, col, lw) {
+    var ang = Math.atan2(y1 - y0, x1 - x0), hl = 12;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - hl * Math.cos(ang - 0.45), y1 - hl * Math.sin(ang - 0.45));
+    ctx.lineTo(x1 - hl * Math.cos(ang + 0.45), y1 - hl * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+  }
+  function sym(s, x, y, size, col, sub) {
+    ctx.fillStyle = col; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.font = "italic " + size + "px " + SERIF; ctx.fillText(s, x, y);
+    var w = ctx.measureText(s).width;
+    if (sub) { ctx.font = "italic " + Math.round(size * 0.62) + "px " + SERIF; ctx.fillText(sub, x + w + 1, y + size * 0.28); w += ctx.measureText(sub).width + 1; }
+    return w;
+  }
+  function txt(s, x, y, size, col) { ctx.fillStyle = col; ctx.font = size + "px " + SANS; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); return ctx.measureText(s).width; }
+  function sci(mant, ex, x, y, size, col) {
+    var w = txt(mant + "×10", x, y, size, col);
+    ctx.font = Math.round(size * 0.68) + "px " + SANS; ctx.fillText(ex, x + w + 1, y - size * 0.38);
+    return w + 1 + ctx.measureText(ex).width;
+  }
+  function button(x, y, w, h, label, on) {
+    ctx.fillStyle = on ? "#dbe8f5" : "white"; ctx.strokeStyle = on ? BLUE : INK; ctx.lineWidth = on ? 2.5 : 1.5;
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = "17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  }
+
+  function drawField() {
+    ctx.fillStyle = PALE; ctx.fillRect(FX, FY, FW, FH);
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 1.5; ctx.strokeRect(FX, FY, FW, FH);
+
+    var dot = Bmt > 0;
+    ctx.strokeStyle = GREY; ctx.fillStyle = GREY; ctx.lineWidth = 1.4;
+    for (var gx = FX + 30; gx < FX + FW; gx += 65) {
+      for (var gy = FY + 30; gy < FY + FH; gy += 65) {
+        ctx.beginPath(); ctx.arc(gx, gy, 6, 0, 2 * Math.PI); ctx.stroke();
+        if (dot) { ctx.beginPath(); ctx.arc(gx, gy, 2, 0, 2 * Math.PI); ctx.fill(); }
+        else { ctx.beginPath(); ctx.moveTo(gx - 3.5, gy - 3.5); ctx.lineTo(gx + 3.5, gy + 3.5); ctx.moveTo(gx - 3.5, gy + 3.5); ctx.lineTo(gx + 3.5, gy - 3.5); ctx.stroke(); }
+      }
+    }
+    var w = sym("B", FX + FW - 110, FY + 22, 20, BLUE, "");
+    txt("= " + Math.abs(Bmt).toFixed(1) + " mT " + (dot ? "⊙" : "⊗"), FX + FW - 110 + w + 6, FY + 22, 17, BLUE);
+    if (Eon) {
+      for (var k = 0; k < 4; k++) arrow(FX + 18, FY + 110 + k * 95 + 34, FX + 18, FY + 110 + k * 95 - 34, ORANGE, 2);
+      sym("E", FX + 26, FY + 96, 20, ORANGE, "");
+    }
+
+    if (trail.length > 1) {
+      ctx.strokeStyle = TRAIL; ctx.lineWidth = 2; ctx.beginPath();
+      for (var i = 0; i < trail.length; i++) { var px = sx(trail[i].x), py = sy(trail[i].y); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+      ctx.stroke();
+    }
+
+    if (alive || aim) {
+      var px0 = alive ? sx(st.x) : aim.x0, py0 = alive ? sy(st.y) : aim.y0;
+      if (alive) {
+        var vmag = Math.hypot(st.vx, st.vy), ex = st.vx / vmag, ey = st.vy / vmag;
+        arrow(px0 + ex * 14, py0 - ey * 14, px0 + ex * 62, py0 - ey * 62, INK, 2.5);
+        sym("v", px0 + ex * 70 - 6, py0 - ey * 70, 19, INK, "");
+
+        var fx = q * (st.vy * Bsi()), fy = q * (Esi() - st.vx * Bsi()), fm = Math.hypot(fx, fy);
+        if (fm > 0) { fx /= fm; fy /= fm; arrow(px0 + fx * 14, py0 - fy * 14, px0 + fx * 54, py0 - fy * 54, ORANGE, 2.5); sym("F", px0 + fx * 64 - 4, py0 - fy * 64, 18, ORANGE, "m"); }
+      }
+      ctx.fillStyle = "white"; ctx.strokeStyle = ORANGE; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(px0, py0, 9, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = ORANGE; ctx.font = "bold 15px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(q < 0 ? "−" : "+", px0, py0 + 1);
+    }
+    if (aim) {
+      ctx.setLineDash([6, 5]); arrow(aim.x0, aim.y0, aim.x1, aim.y1, INK, 2); ctx.setLineDash([]);
+      txt("놓으면 출발", aim.x1 + 12, aim.y1 - 12, 15, INK);
+    }
+    txt("전하를 놓을 자리에서 누른 채 끌어 속도를 정하세요", FX + 12, FY + FH - 18, 16, INK);
+    if (!alive && !aim) txt("영역 밖으로 나갔습니다. 다시 끌어 놓으세요", FX + 12, FY + 22, 16, ORANGE);
+  }
+
+  function drawPanel() {
+    var x0 = 620;
+    txt("전하", x0, 75, 19, INK);
+    button(x0 + 60, 58, 120, 34, "−e (전자)", q < 0);
+    button(x0 + 190, 58, 120, 34, "+e (양전자)", q > 0);
+
+    var w = sym("B", x0, 125, 21, INK, "");
+    txt("= " + Math.abs(Bmt).toFixed(1) + " mT  (" + (Bmt > 0 ? "⊙ 화면 밖" : "⊗ 화면 안") + ")", x0 + w + 8, 125, 19, INK);
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(x0, 158); ctx.lineTo(x0 + 190, 158); ctx.stroke(); ctx.lineCap = "butt";
+    var kx = x0 + (Math.abs(Bmt) - 0.5) / 1.5 * 190;
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(kx, 158, 11, 0, 2 * Math.PI); ctx.fill();
+    button(x0 + 215, 141, 95, 34, "방향 뒤집기", false);
+    button(x0, 200, 310, 34, Eon ? "E 끄기" : "E 켜기 (위쪽, 500 V/m)", Eon);
+
+    var y = 268;
+    var vnow = alive ? Math.hypot(st.vx, st.vy) : vdisp;
+    var vd = Math.round(vnow / 1e4) / 100;
+    w = txt("속력 ", x0, y, 19, INK); w += sym("v", x0 + w, y, 21, INK, ""); w += txt(" = ", x0 + w + 2, y, 19, INK) + 2;
+    w += sci(vd.toFixed(2), "6", x0 + w, y, 19, INK);
+    txt(" m/s", x0 + w, y, 19, INK);
+    txt(Eon ? "E 가 속력을 바꿉니다" : "변하지 않습니다 (B 는 방향만 바꿈)", x0, y + 28, 16, Eon ? ORANGE : INK);
+    var o = orbit(q, M_E, Bsi(), vd * 1e6);
+    if (!Eon) {
+      y = 340;
+      w = sym("r", x0, y, 21, INK, ""); w += txt(" = ", x0 + w + 2, y, 19, INK) + 2; w += sym("mv", x0 + w, y, 21, INK, ""); w += txt(" / (|", x0 + w + 2, y, 19, INK) + 2; w += sym("Q", x0 + w, y, 21, INK, ""); w += txt("|", x0 + w + 1, y, 19, INK) + 1; w += sym("B", x0 + w, y, 21, INK, ""); txt(")", x0 + w + 1, y, 19, INK);
+      y += 30; w = txt("= (", x0 + 14, y, 17, INK); w += sci("9.11", "−31", x0 + 14 + w, y, 17, INK); w += txt(" kg)(", x0 + 14 + w, y, 17, INK); w += sci(vd.toFixed(2), "6", x0 + 14 + w, y, 17, INK); txt(" m/s)", x0 + 14 + w, y, 17, INK);
+      y += 28; w = txt("/ [(", x0 + 14, y, 17, INK); w += sci("1.60", "−19", x0 + 14 + w, y, 17, INK); w += txt(" C)(", x0 + 14 + w, y, 17, INK); w += sci(Math.abs(Bmt).toFixed(1), "−3", x0 + 14 + w, y, 17, INK); txt(" T)]", x0 + 14 + w, y, 17, INK);
+      y += 30; txt("= " + (o.r * 1e3).toFixed(1) + " mm", x0 + 14, y, 21, ORANGE);
+    } else {
+      y = 340; txt("E 가 있으면 원이 아니라 한쪽으로 흘러갑니다", x0, y, 17, INK);
+      y += 30; w = txt("표류 속도 ", x0, y, 17, INK); w += sym("E", x0 + w, y, 19, INK, ""); w += txt("/", x0 + w + 2, y, 17, INK) + 2; w += sym("B", x0 + w, y, 19, INK, ""); w += txt(" = ", x0 + w + 2, y, 17, INK) + 2; w += sci((E_ON / Math.abs(Bsi()) / 1e6).toFixed(2), "6", x0 + w, y, 17, INK); txt(" m/s (" + (Bmt > 0 ? "오른쪽" : "왼쪽") + ")", x0 + w, y, 17, INK);
+      y += 58;
+    }
+    y = 456;
+    w = sym("T", x0, y, 21, INK, ""); w += txt(" = 2π", x0 + w + 2, y, 19, INK) + 2; w += sym("m", x0 + w, y, 21, INK, ""); w += txt(" / (|", x0 + w + 2, y, 19, INK) + 2; w += sym("Q", x0 + w, y, 21, INK, ""); w += txt("|", x0 + w + 1, y, 19, INK) + 1; w += sym("B", x0 + w, y, 21, INK, ""); w += txt(") = " + (o.T * 1e9).toFixed(1) + " ns", x0 + w + 1, y, 19, INK);
+    txt("속력과 무관합니다", x0, y + 28, 16, INK);
+    txt("화면 1 초 = 20 ns 로 느리게 보입니다", x0, 520, 15, GREY);
+  }
+
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawField(); drawPanel();
+  }
+  function step(now) {
+    if (last === null) last = now;
+    var dt = Math.min(0.05, (now - last) / 1000) * SLOW; last = now;
+    if (alive && dt > 0) {
+      st = physics(q, M_E, Bsi(), Esi(), st.x, st.y, st.vx, st.vy, dt);
+      trail.push({ x: st.x, y: st.y }); if (trail.length > 900) trail.shift();
+      if (!inField(st.x, st.y)) alive = false;
+    }
+    draw(); requestAnimationFrame(step);
+  }
+
+  function pos(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+  function snapB(px) { var b = Math.round(Math.max(0.5, Math.min(2.0, 0.5 + (px - 620) / 190 * 1.5)) * 10) / 10; Bmt = (Bmt > 0 ? 1 : -1) * b; }
+  function relaunch() {
+    if (!trail.length) return; var p0 = trail[0];
+    var v = vdisp || 1.5e6;
+    launch(p0.x, p0.y, v * Math.cos(launchA), v * Math.sin(launchA));
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    var p = pos(e); e.preventDefault();
+    if (p.y >= 58 && p.y <= 92 && p.x >= 680 && p.x <= 800) { q = -E_C; relaunch(); draw(); return; }
+    if (p.y >= 58 && p.y <= 92 && p.x >= 810 && p.x <= 930) { q = E_C; relaunch(); draw(); return; }
+    if (p.y >= 141 && p.y <= 175 && p.x >= 835 && p.x <= 930) { Bmt = -Bmt; relaunch(); draw(); return; }
+    if (Math.abs(p.y - 158) < 18 && p.x >= 608 && p.x <= 822) { drag = "B"; snapB(p.x); relaunch(); draw(); return; }
+    if (p.y >= 200 && p.y <= 234 && p.x >= 620 && p.x <= 930) { Eon = !Eon; relaunch(); draw(); return; }
+    if (p.x > FX && p.x < FX + FW && p.y > FY && p.y < FY + FH) { aim = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = "aim"; cv.setPointerCapture(e.pointerId); draw(); }
+  });
+  cv.addEventListener("pointermove", function (e) {
+    if (!drag) return; var p = pos(e);
+    if (drag === "B") { snapB(p.x); relaunch(); draw(); return; }
+    if (drag === "aim") { aim.x1 = p.x; aim.y1 = p.y; draw(); }
+  });
+  window.addEventListener("pointerup", function () {
+    if (drag === "aim" && aim) {
+      var dx = aim.x1 - aim.x0, dy = aim.y1 - aim.y0;
+      if (Math.hypot(dx, dy) > 8) launch((aim.x0 - CX) / S, (CY - aim.y0) / S, dx / PXV * 1e6, -dy / PXV * 1e6);
+      aim = null; draw();
+    }
+    drag = null;
+  });
+  draw(); requestAnimationFrame(step);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
