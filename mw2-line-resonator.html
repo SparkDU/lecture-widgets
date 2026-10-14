@@ -174,7 +174,7 @@
     setText("tlr-fs", p.f_ser_GHz.toFixed(2)); setText("tlr-ks", "ℓ = " + p.k_ser);
     setText("tlr-rs", fmtOhm(p.R_ser)); setText("tlr-qs", isFinite(p.Q0_ser) ? p.Q0_ser.toFixed(0) : "∞");
     var hint;
-    if (aDB === 0) hint = "손실 0: 골은 0 Ω, 봉우리는 ∞ 라 Q₀ 를 셀 수 없습니다";
+    if (aDB === 0) hint = "손실 0: 골은 0 Ω, 봉우리는 ∞, Q₀ 도 ∞ 입니다";
     else if (p.f_par_GHz > fb && p.f_ser_GHz > fb) hint = "선로가 너무 짧아 6 GHz 안에 공진이 없습니다";
     else if (term === "단락") hint = "단락: 첫 봉우리(병렬)가 λ/4, 첫 골(직렬)이 λ/2 에 옵니다";
     else hint = "개방: 첫 골(직렬)이 λ/4, 첫 봉우리(병렬)가 λ/2 에 옵니다";
