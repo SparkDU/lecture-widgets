@@ -138,14 +138,15 @@
     var dot = Bmt > 0;
     ctx.strokeStyle = GREY; ctx.fillStyle = GREY; ctx.lineWidth = 1.4;
     for (var gx = FX + 30; gx < FX + FW; gx += 65) {
-      for (var gy = FY + 30; gy < FY + FH; gy += 65) {
+      for (var gy = FY + 30; gy < FY + FH - 36; gy += 65) {
         ctx.beginPath(); ctx.arc(gx, gy, 6, 0, 2 * Math.PI); ctx.stroke();
         if (dot) { ctx.beginPath(); ctx.arc(gx, gy, 2, 0, 2 * Math.PI); ctx.fill(); }
         else { ctx.beginPath(); ctx.moveTo(gx - 3.5, gy - 3.5); ctx.lineTo(gx + 3.5, gy + 3.5); ctx.moveTo(gx - 3.5, gy + 3.5); ctx.lineTo(gx + 3.5, gy - 3.5); ctx.stroke(); }
       }
     }
-    var w = sym("B", FX + FW - 110, FY + 22, 20, BLUE, "");
-    txt("= " + Math.abs(Bmt).toFixed(1) + " mT " + (dot ? "⊙" : "⊗"), FX + FW - 110 + w + 6, FY + 22, 17, BLUE);
+    ctx.fillStyle = PALE; ctx.fillRect(FX + FW - 124, FY + 6, 122, 32);
+    var w = sym("B", FX + FW - 112, FY + 22, 20, BLUE, "");
+    txt("= " + Math.abs(Bmt).toFixed(1) + " mT " + (dot ? "⊙" : "⊗"), FX + FW - 112 + w + 6, FY + 22, 17, BLUE);
     if (Eon) {
       for (var k = 0; k < 4; k++) arrow(FX + 18, FY + 110 + k * 95 + 34, FX + 18, FY + 110 + k * 95 - 34, ORANGE, 2);
       sym("E", FX + 26, FY + 96, 20, ORANGE, "");
