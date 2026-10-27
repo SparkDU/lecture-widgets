@@ -142,13 +142,14 @@
     ctx.textAlign = "left"; ctx.fillText("전류계  " + fmt(p.iG * 1000, 1) + " mA", gx + 54, gy);
     ctx.fillStyle = INK; ctx.font = "17px " + SANS; ctx.fillText("스위치를 클릭해 보세요", 60, 40);
   }
-  function chart(x, y, w, h, key, label, unit, lo, hi, col, scale) {
+  function chart(x, y, w, h, key, label, unit, lo, hi, col, scale, sub) {
     ctx.fillStyle = "white"; ctx.fillRect(x, y, w, h); ctx.strokeStyle = LIGHT; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
     var y0 = y + h - (0 - lo) / (hi - lo) * h;
     ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + w, y0); ctx.stroke();
     ctx.fillStyle = INK; ctx.font = "16px " + SANS; ctx.textAlign = "right"; ctx.textBaseline = "middle";
     ctx.fillText(hi.toFixed(hi < 1 ? 2 : 0), x - 6, y + 8); ctx.fillText("0", x - 6, y0); if (lo < 0) ctx.fillText(fmt(lo, 0), x - 6, y + h - 8);
-    ctx.textAlign = "left"; ctx.fillText(label + " (" + unit + ")   시간 →  지난 8 s", x, y - 14);
+    ctx.textAlign = "left"; ctx.fillText(label + " (" + unit + ")   시간 →  지난 8 s", x, y - (sub ? 32 : 14));
+    if (sub) { ctx.fillStyle = col; ctx.fillText(sub, x, y - 14); ctx.fillStyle = INK; }
     ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); var first = true;
     for (var i = 0; i < hist.length; i++) {
       var px = x + w + (hist[i].t - t) / TWIN * w, val = hist[i][key] * scale;
@@ -163,17 +164,16 @@
     var p = cur();
     drawCircuit(p);
     chart(625, 70, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
-    chart(625, 330, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1);
+    chart(625, 330, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1, "철심 자속은 이에 비례");
 
     ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+
     var ry = 244;
-    ctx.font = "20px " + SANS; ctx.fillText("emf₂ = −", 625, ry);
-    ctx.font = "italic 20px " + SERIF; ctx.fillText("M", 712, ry);
-    ctx.font = "20px " + SANS; ctx.fillText("dI₁/dt = " + fmt(p.emf, 3) + " V", 736, ry);
-    ctx.fillText("전류계 = emf₂ / R = " + fmt(p.iG * 1000, 1) + " mA", 625, ry + 28);
+    ctx.font = "19px " + SANS; ctx.fillText("자속이 변하는 동안 코일 2 에 생긴 전압: " + fmt(p.emf, 3) + " V", 625, ry);
+    ctx.fillText("전류계 = 전압 / 저항 = " + fmt(p.iG * 1000, 1) + " mA", 625, ry + 28);
     var ry2 = 504;
-    ctx.fillStyle = INK; ctx.font = "20px " + SANS; ctx.fillText("I₁ = " + fmt(p.I1, 3) + " A", 625, ry2);
-    ctx.font = "16px " + SANS; ctx.fillStyle = "#555"; ctx.fillText("전류가 변하는 동안만 바늘이 움직인다. 일정하면 0", 625, ry2 + 26);
+    ctx.fillStyle = INK; ctx.font = "19px " + SANS; ctx.fillText("I₁ = " + fmt(p.I1, 3) + " A", 625, ry2);
+    ctx.font = "16px " + SANS; ctx.fillStyle = "#555"; ctx.fillText("자속이 변하는 동안만 바늘이 움직인다. 일정하면 0", 625, ry2 + 26);
   }
   function step(now) {
     if (last === null) last = now;
