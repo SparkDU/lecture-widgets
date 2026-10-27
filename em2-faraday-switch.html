@@ -162,8 +162,8 @@
     ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.clearRect(0, 0, W, H);
     var p = cur();
     drawCircuit(p);
-    chart(625, 80, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1);
-    chart(625, 300, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
+    chart(625, 80, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
+    chart(625, 300, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1);
 
     var ry = 472; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.font = "20px " + SANS; ctx.fillText("emf₂ = −", 625, ry);
