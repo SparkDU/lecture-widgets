@@ -164,16 +164,16 @@
     var p = cur();
     drawCircuit(p);
     chart(625, 70, 265, 150, "iG", "전류계", "mA", -25, 25, BLUE, 1000);
-    chart(625, 330, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1, "철심 자속은 이에 비례");
+    chart(625, 350, 265, 150, "I1", "코일 1 전류", "A", 0, 1.2, ORANGE, 1, "철심 자속은 이에 비례");
 
     ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "middle";
 
     var ry = 244;
-    ctx.font = "19px " + SANS; ctx.fillText("자속이 변하는 동안 코일 2 에 생긴 전압: " + fmt(p.emf, 3) + " V", 625, ry);
-    ctx.fillText("전류계 = 전압 / 저항 = " + fmt(p.iG * 1000, 1) + " mA", 625, ry + 28);
-    var ry2 = 504;
-    ctx.fillStyle = INK; ctx.font = "19px " + SANS; ctx.fillText("I₁ = " + fmt(p.I1, 3) + " A", 625, ry2);
-    ctx.font = "16px " + SANS; ctx.fillStyle = "#555"; ctx.fillText("자속이 변하는 동안만 바늘이 움직인다. 일정하면 0", 625, ry2 + 26);
+    ctx.font = "18px " + SANS; ctx.fillText("자속이 변하는 동안", 625, ry);
+    ctx.fillText("코일 2 에 생긴 전압: " + fmt(p.emf, 3) + " V", 625, ry + 24);
+    ctx.fillText("전류계 = 전압 / 저항 = " + fmt(p.iG * 1000, 1) + " mA", 625, ry + 48);
+    var ry2 = 522;
+    ctx.fillStyle = INK; ctx.font = "18px " + SANS; ctx.fillText("I₁ = " + fmt(p.I1, 3) + " A   (일정하면 바늘은 0)", 625, ry2);
   }
   function step(now) {
     if (last === null) last = now;
