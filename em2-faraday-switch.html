@@ -45,7 +45,7 @@
 <main>
 <div style="text-align:center">
 <div class="캔버스틀"><canvas id="패러데이실험시뮬" width="1920" height="1080"
-        style="min-width:680px;width:100%;max-width:960px;cursor:pointer;touch-action:none"></canvas></div>
+        style="min-width:680px;width:100%;max-width:880px;cursor:pointer;touch-action:none"></canvas></div>
 </div>
 
 <script>
@@ -71,6 +71,7 @@
   }
 
   var closed = true, tSw = 0, Istart = 0, t = 0, last = null, hist = [];
+  var ph1 = 0, ph2 = 0;
 
   (function seed() {
     var dt = 1 / 30;
@@ -91,13 +92,47 @@
       ctx.globalAlpha = 0.4; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cx, y, 36, 8, 0, 0, Math.PI); ctx.stroke(); ctx.globalAlpha = 1;
     }
   }
+
+  function fluxArrows(cx, frac) {
+    if (frac < 0.02) return;
+    ctx.save(); ctx.globalAlpha = 0.25 + 0.75 * frac; ctx.strokeStyle = "#666"; ctx.fillStyle = "#666"; ctx.lineWidth = 1 + 3 * frac;
+    for (var k = -1; k <= 1; k++) {
+      var x = cx + 14 * k;
+      ctx.beginPath(); ctx.moveTo(x, 455); ctx.lineTo(x, 104); ctx.stroke();
+      var heads = [104, 300];
+      for (var j = 0; j < heads.length; j++) {
+        var y = heads[j], s = 4 + 4 * frac;
+        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x - s, y + s); ctx.lineTo(x + s, y + s); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function dots(cx, yc, n, col, ph) {
+    ph = ph - Math.floor(ph);
+    for (var i = 0; i < n; i++) {
+      var y = yc + (i - (n - 1) / 2) * 16;
+      for (var k = 0; k < 2; k++) {
+        var f = (ph + k / 2) % 1, a = Math.PI + f * Math.PI;
+        ctx.fillStyle = col; ctx.strokeStyle = "white"; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(cx + 36 * Math.cos(a), y + 8 * Math.sin(a), 3.4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      }
+    }
+  }
   function drawCircuit(p) {
     var cx = 200;
     ctx.fillStyle = CORE; ctx.fillRect(cx - 26, 70, 52, 400); ctx.strokeStyle = "#666"; ctx.lineWidth = 1; ctx.strokeRect(cx - 26, 70, 52, 400);
-    ctx.fillStyle = "#555"; ctx.font = "17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("철심", cx, 270);
+    ctx.fillStyle = "#555"; ctx.font = "17px " + SANS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("철심", cx, 86);
+    fluxArrows(cx, p.I1 / I0);
     coil(cx, 170, 4, BLUE); coil(cx, 390, 4, ORANGE);
-    ctx.fillStyle = BLUE; ctx.font = "16px " + SANS; ctx.textAlign = "right"; ctx.fillText("코일 2", cx - 46, 170);
+    if (p.I1 > 0.02) dots(cx, 390, 4, ORANGE, ph1);
+    if (p.iG !== 0) dots(cx, 170, 4, BLUE, ph2);
+    ctx.fillStyle = BLUE; ctx.font = "16px " + SANS; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText("코일 2", cx - 46, 170);
     ctx.fillStyle = ORANGE; ctx.fillText("코일 1", cx - 46, 390);
+
+    var st = p.emf < 0 ? "▲ 커지는 중" : (p.emf > 0 ? "▼ 작아지는 중" : "■ 일정");
+    ctx.fillStyle = INK; ctx.font = "14px " + SANS; ctx.textAlign = "right";
+    ctx.fillText("쇄교 자속", cx - 46, 198); ctx.fillText(st, cx - 46, 218);
 
     var xr = 420;
     ctx.strokeStyle = ORANGE; ctx.lineWidth = 2;
@@ -179,6 +214,8 @@
     if (last === null) last = now;
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     t += dt; var p = cur(); hist.push({ t: t, I1: p.I1, iG: p.iG });
+    ph1 += dt * 0.8 * p.I1 / I0;
+    ph2 += dt * 0.8 * p.iG / 0.02;
     while (hist.length && hist[0].t < t - TWIN) hist.shift();
     draw(); requestAnimationFrame(step);
   }
