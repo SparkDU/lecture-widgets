@@ -73,7 +73,7 @@
   var B = 0.5, y = 0.4, vState = 0, auto = false, dragging = false, dragOff = 0, sliderDrag = false;
   var hist = [];
   var t = 0, last = null;
-  var yPrev = y;
+  var TAU = 0.2, trail = [];
 
   (function seed() {
     var dt = 1 / 30;
@@ -223,10 +223,12 @@
     if (last === null) last = now;
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (dt > 0) {
-      var y0 = yPrev;
       if (auto) { y = Math.min(Y_MAX, y + 0.25 * dt); if (y >= Y_MAX) auto = false; }
-      var p = physics(B, D_M, y0, y, dt);
-      yPrev = y; vState = p.v; t += dt;
+      t += dt;
+      trail.push({ t: t, y: y });
+      while (trail.length > 1 && trail[1].t <= t - TAU) trail.shift();
+      var p = physics(B, D_M, trail[0].y, y, Math.max(t - trail[0].t, 1e-6));
+      vState = p.v;
       hist.push({ t: t, phi: p.phi, emf: p.emf });
       while (hist.length && hist[0].t < t - TWIN) hist.shift();
     }
