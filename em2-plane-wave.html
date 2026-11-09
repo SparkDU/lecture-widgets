@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 앞으로 가는 파, 뒤로 가는 파 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 앞으로 가는 파, 뒤로 가는 파</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="평면파시뮬" width="1920" height="1080"
+        style="min-width:680px;width:100%;max-width:800px;cursor:pointer;touch-action:none"></canvas></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("평면파시뮬");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", SKY = "#56B4E9", ORANGE = "#E69F00", GREY = "#9b9b9b", INK = "#333333", LIGHT = "#e4e4e4", PALE = "#FDEBC8";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = "Arial, Helvetica, sans-serif";
+  var W = 960, H = 540;
+  var ZMAX = 6.0, PX0 = 100, PX1 = 880;
+  var Y1 = 150, Y2 = 300, AMP = 48;
+  var E0V = 1.0;
+  var FS = [1e8, 2e8, 3e8], RS = [0, 0.5, 1], BX = [250, 350, 450], BW = 88;
+  var SX0 = 640, SX1 = 880, CY1 = 420, CY2 = 476, CH = 42;
+  var TSCALE = 2.5e-9;
+
+  function physics(E0, f, z, t, r) {
+    var MU0 = 4 * Math.PI * 1e-7, EPS0 = 8.854187817e-12;
+    var c = 1 / Math.sqrt(MU0 * EPS0);
+    var w = 2 * Math.PI * f, k0 = w / c;
+    var lam = 2 * Math.PI / k0, T = 1 / f;
+    var Ef = E0 * Math.cos(w * t - k0 * z), Eb = r * E0 * Math.cos(w * t + k0 * z);
+    var env = E0 * Math.sqrt(1 + r * r + 2 * r * Math.cos(2 * k0 * z));
+    return { Ef: Ef, Eb: Eb, Es: Ef + Eb, env: env, c: c, w: w, k0: k0, lam: lam, T: T, zcF: c * t, zcB: lam - c * t };
+  }
+
+  var f = FS[0], r = RS[2], tRaw = 0, playing = false, last = null, sliderDrag = false;
+  function P() { return physics(E0V, f, 0, 0, r); }
+
+  function tSnap() { var T = P().T; var q = Math.round(tRaw * 1e11) / 1e11; if (q > T) q = T; if (q < 0) q = 0; return q; }
+  function xOfZ(z) { return PX0 + (PX1 - PX0) * z / ZMAX; }
+  function fmt(x, n) { var s = Math.abs(x).toFixed(n); return (x < 0 ? "−" : "") + s; }
+  function runs(x, y, items) {
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      ctx.font = it.f; ctx.fillStyle = it.c || INK;
+      ctx.fillText(it.t, x, y + (it.dy || 0));
+      x += ctx.measureText(it.t).width + (it.gap || 0);
+    }
+    return x;
+  }
+  var I19 = "italic 19px " + SERIF, R19 = "19px " + SERIF, I13 = "italic 13px " + SERIF, R13 = "13px " + SERIF, S15 = "15px " + SANS, S14 = "14px " + SANS, S13 = "13px " + SANS;
+
+  function Esym(sign, col) { return [{ t: "E", f: I19, c: col }, { t: sign, f: R13, c: col, dy: 6, gap: 4 }]; }
+
+  function arrow(x0, y0, x1, y1, col, lw) {
+    var a = Math.atan2(y1 - y0, x1 - x0), hl = 9;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - hl * Math.cos(a - 0.45), y1 - hl * Math.sin(a - 0.45));
+    ctx.lineTo(x1 - hl * Math.cos(a + 0.45), y1 - hl * Math.sin(a + 0.45));
+    ctx.closePath(); ctx.fill();
+  }
+  function axis(yAxis, scaleText) {
+    arrow(PX0 - 12, yAxis, PX1 + 22, yAxis, INK, 1.2);
+    ctx.textBaseline = "middle";
+    for (var zi = 0; zi <= ZMAX; zi++) {
+      var xx = xOfZ(zi);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xx, yAxis - 4); ctx.lineTo(xx, yAxis + 4); ctx.stroke();
+    }
+    ctx.font = S14; ctx.fillStyle = INK; ctx.textAlign = "right";
+    ctx.fillText("+" + scaleText, PX0 - 18, yAxis - AMP);
+    ctx.fillText("−" + scaleText, PX0 - 18, yAxis + AMP);
+    ctx.strokeStyle = LIGHT; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PX0, yAxis - AMP); ctx.lineTo(PX1, yAxis - AMP); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PX0, yAxis + AMP); ctx.lineTo(PX1, yAxis + AMP); ctx.stroke();
+    ctx.textAlign = "left";
+  }
+  function curve(yAxis, pick, scale, col, lw, dash, t) {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath();
+    var N = 400;
+    for (var i = 0; i <= N; i++) {
+      var z = ZMAX * i / N, p = physics(E0V, f, z, t, r), v = pick(p) / scale * AMP;
+      var x = xOfZ(z), y = yAxis - v;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  function dot(x, y, col) { ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+  function tri(x, y, col) { ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x - 6.5, y + 5); ctx.lineTo(x + 6.5, y + 5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  function button(x, y, w, label, on, accent) {
+    ctx.fillStyle = on ? PALE : "#ffffff"; ctx.strokeStyle = on ? (accent || ORANGE) : GREY; ctx.lineWidth = on ? 2 : 1.2;
+    ctx.fillRect(x, y, w, CH); ctx.strokeRect(x, y, w, CH);
+    ctx.fillStyle = INK; ctx.font = S15; ctx.textAlign = "center"; ctx.fillText(label, x + w / 2, y + CH / 2); ctx.textAlign = "left";
+  }
+
+  function draw() {
+    var p = P(), t = tSnap(), T = p.T, lam = p.lam;
+    var q = physics(E0V, f, 0, t, r), zcF = q.zcF, zcB = q.zcB;
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+
+    var x = runs(PX0 - 60, 30, Esym("+", BLUE).concat([
+      { t: "= ", f: R19 }, { t: "E", f: I19 }, { t: "0", f: R13, dy: 6, gap: 3 }, { t: "cos(", f: R19 }, { t: "ω", f: I19 }, { t: "t", f: I19, gap: 3 }, { t: "− ", f: R19 },
+      { t: "k", f: I19 }, { t: "0", f: R13, dy: 6, gap: 2 }, { t: "z", f: I19 }, { t: ")", f: R19, gap: 34 }]));
+    var rLabel = r === 1 ? "" : (r === 0 ? "0 " : "0.5 ");
+    runs(x, 30, Esym("−", SKY).concat([
+      { t: "= ", f: R19 }, { t: rLabel, f: S15 }, { t: "E", f: I19 }, { t: "0", f: R13, dy: 6, gap: 3 }, { t: "cos(", f: R19 }, { t: "ω", f: I19 }, { t: "t", f: I19, gap: 3 }, { t: "+ ", f: R19 },
+      { t: "k", f: I19 }, { t: "0", f: R13, dy: 6, gap: 2 }, { t: "z", f: I19 }, { t: ")", f: R19 }]));
+
+    runs(PX0 - 60, 60, [
+      { t: "f", f: I19, gap: 3 }, { t: "= " + fmt(f / 1e6, 0) + " MHz", f: S15, gap: 18 },
+      { t: "λ", f: I19, gap: 3 }, { t: "= " + fmt(lam, 2) + " m", f: S15, gap: 18 },
+      { t: "T", f: I19, gap: 3 }, { t: "= " + fmt(T * 1e9, 1) + " ns", f: S15, gap: 18 },
+      { t: "t", f: I19, gap: 3 }, { t: "= " + fmt(t * 1e9, 2) + " ns", f: S15, c: ORANGE }
+    ]);
+
+    axis(Y1, fmt(E0V, 2));
+    curve(Y1, function (s) { return s.Eb; }, E0V, SKY, 2.2, [7, 5], t);
+    curve(Y1, function (s) { return s.Ef; }, E0V, BLUE, 2.4, null, t);
+    var n, zz;
+    for (n = -Math.floor(zcF / lam + 1e-9); zcF + n * lam <= ZMAX + 1e-9; n++) { zz = zcF + n * lam; if (zz >= -1e-9) dot(xOfZ(zz), Y1 - AMP, ORANGE); }
+    if (r > 0) for (n = -Math.ceil(zcB / lam) - 1; zcB + n * lam <= ZMAX + 1e-9; n++) { zz = zcB + n * lam; if (zz >= -1e-9) tri(xOfZ(zz), Y1 - AMP * r, SKY); }
+    runs(PX0 - 92, Y1 - AMP - 22, Esym("+", BLUE).concat([{ t: "와 ", f: S14, c: INK, gap: 2 }]).concat(Esym("−", SKY)).concat([{ t: "(V/m)", f: S14, c: INK }]));
+
+    ctx.strokeStyle = BLUE; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(PX1 - 330, Y1 - AMP - 22); ctx.lineTo(PX1 - 300, Y1 - AMP - 22); ctx.stroke();
+    runs(PX1 - 292, Y1 - AMP - 22, [{ t: "앞으로 가는 파 (마루 ●)", f: S13, c: INK }]);
+    ctx.strokeStyle = SKY; ctx.lineWidth = 2.2; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(PX1 - 150, Y1 - AMP - 22); ctx.lineTo(PX1 - 120, Y1 - AMP - 22); ctx.stroke(); ctx.setLineDash([]);
+    runs(PX1 - 112, Y1 - AMP - 22, [{ t: "뒤로 가는 파 (마루 ▲)", f: S13, c: INK }]);
+
+    axis(Y2, fmt(2 * E0V, 2));
+    if (r > 0) {
+      curve(Y2, function (s) { return s.env; }, 2 * E0V, GREY, 1.0, [3, 3], t);
+      curve(Y2, function (s) { return -s.env; }, 2 * E0V, GREY, 1.0, [3, 3], t);
+    }
+    curve(Y2, function (s) { return s.Es; }, 2 * E0V, ORANGE, 2.4, null, t);
+    runs(PX0 - 92, Y2 - AMP - 22, Esym("+", BLUE).concat([{ t: "+ ", f: R19, c: INK }]).concat(Esym("−", SKY)).concat([{ t: "(V/m)", f: S14, c: INK }]));
+    if (r === 1) {
+      for (n = 0; lam / 4 + n * lam / 2 <= ZMAX + 1e-9; n++) dot(xOfZ(lam / 4 + n * lam / 2), Y2, "#ffffff");
+      runs(PX1 - 330, Y2 - AMP - 22, [{ t: "○ 마디: 언제나 0 인 점 · 제자리에서 출렁임", f: S13, c: INK }]);
+    } else if (r > 0) {
+      runs(PX1 - 330, Y2 - AMP - 22, [{ t: "뒤 파가 작으면 완전히 0 인 점은 없음", f: S13, c: INK }]);
+    } else {
+      runs(PX1 - 330, Y2 - AMP - 22, [{ t: "뒤로 가는 파가 없으면 앞 파 그대로", f: S13, c: INK }]);
+    }
+
+    ctx.font = S14; ctx.fillStyle = INK; ctx.textAlign = "center";
+    for (var zi = 0; zi <= ZMAX; zi++) ctx.fillText(String(zi), xOfZ(zi), Y2 + AMP + 18);
+    ctx.textAlign = "left"; ctx.font = S14; ctx.fillText("z (m)", PX1 + 26, Y2 + AMP + 18);
+
+    runs(PX0 - 60, Y2 + AMP + 44, [
+      { t: "앞으로 가는 파의 마루 ", f: S15, c: INK }, { t: "z", f: I19, gap: 3 }, { t: "= ", f: R19 }, { t: "c", f: I19 }, { t: "t", f: I19, gap: 3 },
+      { t: "= " + fmt(zcF, 2) + " m", f: S15, gap: 22 },
+      { t: "(한 주기 ", f: S15, c: INK }, { t: "T", f: I19, c: INK, gap: 3 }, { t: "동안 ", f: S15, c: INK }, { t: "λ", f: I19, c: INK, gap: 3 }, { t: "= " + fmt(lam, 2) + " m)", f: S15, c: INK, gap: 22 },
+      { t: "뒤로 가는 파의 마루는 같은 거리만큼 −z 로", f: S15, c: INK }
+    ]);
+
+    ctx.lineWidth = 1.4; ctx.strokeStyle = INK; ctx.fillStyle = playing ? PALE : "#ffffff";
+    ctx.fillRect(PX0 - 60, CY1, 120, CH); ctx.strokeRect(PX0 - 60, CY1, 120, CH);
+    ctx.fillStyle = INK;
+    if (playing) {
+      ctx.fillRect(PX0 - 44, CY1 + 13, 5, 16); ctx.fillRect(PX0 - 35, CY1 + 13, 5, 16);
+      ctx.font = S15; ctx.fillText("멈춤", PX0 - 22, CY1 + CH / 2);
+    } else {
+      ctx.beginPath(); ctx.moveTo(PX0 - 44, CY1 + 12); ctx.lineTo(PX0 - 28, CY1 + CH / 2); ctx.lineTo(PX0 - 44, CY1 + CH - 12); ctx.closePath(); ctx.fill();
+      ctx.font = S15; ctx.fillText("재생", PX0 - 20, CY1 + CH / 2);
+    }
+    for (var j = 0; j < 3; j++) button(BX[j], CY1, BW, fmt(FS[j] / 1e6, 0) + " MHz", f === FS[j]);
+    runs(SX0 - 52, CY1 + CH / 2, [{ t: "t", f: I19, gap: 3 }, { t: ":", f: S15 }]);
+    ctx.fillStyle = LIGHT; ctx.fillRect(SX0, CY1 + CH / 2 - 3, SX1 - SX0, 6);
+    var kx = SX0 + (SX1 - SX0) * (t / T);
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(kx, CY1 + CH / 2, 11, 0, 2 * Math.PI); ctx.fill();
+    ctx.font = S14; ctx.fillStyle = INK; ctx.textAlign = "center";
+    ctx.fillText("0", SX0, CY1 + CH + 10); runs(SX1 - 5, CY1 + CH + 10, [{ t: "T", f: "italic 15px " + SERIF, c: INK }]);
+    ctx.textAlign = "left";
+
+    runs(PX0 - 60, CY2 + CH / 2, [{ t: "뒤로 가는 파 크기:", f: S15, c: INK }]);
+    var RL = ["없음", "절반", "같음"];
+    for (j = 0; j < 3; j++) button(BX[j], CY2, BW, RL[j], r === RS[j], SKY);
+  }
+
+  function frame(now) {
+    if (!playing) return;
+    if (last !== null) tRaw += (now - last) / 1000 * TSCALE;
+    var TT = P().T; while (tRaw >= TT) tRaw -= TT;
+    last = now;
+    draw();
+    requestAnimationFrame(frame);
+  }
+  function play(on) { playing = !!on; last = null; if (playing) requestAnimationFrame(frame); else draw(); }
+  function setT(sec) { playing = false; tRaw = sec; draw(); }
+  function setR(v) { r = v; draw(); }
+  function setF(v) { f = v; tRaw = 0; draw(); }
+
+  function pos(e) { var b = cv.getBoundingClientRect(); return { x: (e.clientX - b.left) * W / b.width, y: (e.clientY - b.top) * H / b.height }; }
+  function inRect(p, x, y, w, h) { return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h; }
+  function sliderSet(px) { var fr = Math.min(1, Math.max(0, (px - SX0) / (SX1 - SX0))); playing = false; tRaw = fr * P().T; draw(); }
+  cv.addEventListener("pointerdown", function (e) {
+    var p = pos(e);
+    if (inRect(p, PX0 - 60, CY1, 120, CH)) { play(!playing); e.preventDefault(); return; }
+    for (var j = 0; j < 3; j++) if (inRect(p, BX[j], CY1, BW, CH)) { setF(FS[j]); e.preventDefault(); return; }
+    for (j = 0; j < 3; j++) if (inRect(p, BX[j], CY2, BW, CH)) { setR(RS[j]); e.preventDefault(); return; }
+    if (inRect(p, SX0 - 16, CY1 - 6, SX1 - SX0 + 32, CH + 12)) {
+      sliderDrag = true; if (cv.setPointerCapture) { try { cv.setPointerCapture(e.pointerId); } catch (_) {} }
+      sliderSet(p.x); e.preventDefault();
+    }
+  });
+  cv.addEventListener("pointermove", function (e) { if (sliderDrag) { sliderSet(pos(e).x); e.preventDefault(); } });
+  function up(e) { if (sliderDrag) { sliderDrag = false; if (cv.releasePointerCapture) { try { cv.releasePointerCapture(e.pointerId); } catch (_) {} } } }
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+
+  window.__평면파시뮬 = {
+    state: function () { var p = P(), t = tSnap(), q = physics(E0V, f, 0, t, r); return { t: t, T: p.T, lam: p.lam, f: f, r: r, zcF: q.zcF, zcB: q.zcB }; },
+    play: play, setT: setT, setR: setR, setF: setF
+  };
+  draw();
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
