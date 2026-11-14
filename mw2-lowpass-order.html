@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>움직여 보기: 차수와 리플 · 초고주파공학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>움직여 보기: 차수와 리플</h1>
+<div class="과목">초고주파공학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div id="lpfbox" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;max-width:1120px;margin:0 auto">
+<div class="캔버스틀"><canvas id="lpfsim" width="1120" height="760"
+        style="min-width:680px;flex:1 1 400px;max-width:600px;width:100%;touch-action:none"></canvas></div>
+<div style="flex:1 1 300px;text-align:left;line-height:1.5;font-size:max(0.84em, 19px)">
+<div id="lpf-lab1" style="color:#333;font-size:0.8em">차단주파수에서</div>
+<div><math><mi>&#x3C9;</mi><mo>=</mo><msub><mi>&#x3C9;</mi><mi>c</mi></msub></math> : 삽입손실 <math><mn id="lpf-il1">3.0</mn><mtext>&#x2009;dB</mtext></math></div>
+<div id="lpf-lab2" style="color:#333;font-size:0.8em;margin-top:0.45em">차단주파수의 2배에서</div>
+<div><math><mi>&#x3C9;</mi><mo>=</mo><mn>2</mn><msub><mi>&#x3C9;</mi><mi>c</mi></msub></math> : 삽입손실 <math><mn id="lpf-il2">18.1</mn><mtext>&#x2009;dB</mtext></math></div>
+<div>통과 전력: 입사 전력의 <math><mn>1</mn><mo>/</mo></math><span id="lpf-p2">65</span></div>
+<div id="lpf-hint" style="font-size:0.72em;color:#333;margin-top:0.5em">최대평탄: 통과대역에서 삽입손실이 평평하고, 차단주파수에서 3 dB 입니다</div>
+</div>
+</div>
+<div style="max-width:960px;margin:0.4em auto 0;font-size:0.72em;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<span style="white-space:nowrap">차수 <i>N</i></span>
+<input id="lpfn" type="range" min="1" max="9" step="1" value="3" style="flex:1 1 180px">
+<span id="lpfnv" style="width:1.6em;text-align:left">3</span>
+<span style="white-space:nowrap;margin-left:12px">응답 종류</span>
+<label style="white-space:nowrap"><input id="lpf-r0" type="radio" name="lpfrip" value="0" checked> 최대평탄</label>
+<label style="white-space:nowrap"><input id="lpf-r1" type="radio" name="lpfrip" value="0.5"> 등리플 0.5 dB</label>
+<label style="white-space:nowrap"><input id="lpf-r2" type="radio" name="lpfrip" value="3"> 등리플 3 dB</label>
+</div>
+</div>
+
+<script>
+(function () {
+
+  function physics(N, rip, xs) {
+    function cheb(n, x) {
+      var a = Math.abs(x);
+      if (a <= 1) return Math.cos(n * Math.acos(x));
+      var v = Math.cosh(n * Math.log(a + Math.sqrt(a * a - 1)));
+      return (x < 0 && n % 2 === 1) ? -v : v;
+    }
+    var k2 = (rip > 0) ? Math.pow(10, rip / 10) - 1 : 1;
+    function plr(x) {
+      if (rip > 0) { var t = cheb(N, x); return 1 + k2 * t * t; }
+      return 1 + Math.pow(Math.abs(x), 2 * N);
+    }
+    function dB(p) { return 10 * Math.log(p) / Math.LN10; }
+    var il = [];
+    for (var i = 0; i < xs.length; i++) il.push(dB(plr(xs[i])));
+    return { il: il, il1: dB(plr(1)), il2: dB(plr(2)), plr2: plr(2) };
+  }
+
+  var cv = document.getElementById("lpfsim");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var sn = document.getElementById("lpfn"), snv = document.getElementById("lpfnv");
+  var radios = [document.getElementById("lpf-r0"), document.getElementById("lpf-r1"), document.getElementById("lpf-r2")];
+  var BLUE = "#0072B2", ORANGE = "#E69F00", INK = "#222222", GREY = "#999999";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  var W = 560, H = 380;
+  var N = 3, rip = 0;
+  function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
+  function label(txt, x, y, color, font, align) {
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x, y);
+  }
+  function fmtRatio(p) {
+    if (p >= 1e8) return (p / 1e8).toFixed(1) + "억";
+    if (p >= 1e4) return (p / 1e4).toFixed(1) + "만";
+    if (p >= 10) return p.toFixed(0);
+    return (Math.abs(p - Math.round(p)) < 0.05) ? Math.round(p) + "" : p.toFixed(1);
+  }
+  function curve(xa, xb, ya, yb, px0, px1, py0, py1, lw) {
+    var M = 700, xs = [];
+    for (var i = 0; i <= M; i++) xs.push(xa + (xb - xa) * i / M);
+    var p = physics(N, rip, xs);
+    ctx.save(); ctx.beginPath(); ctx.rect(px0, py1, px1 - px0, py0 - py1); ctx.clip();
+    ctx.strokeStyle = BLUE; ctx.lineWidth = lw; ctx.beginPath();
+    for (var j = 0; j <= M; j++) {
+      var X = px0 + (xs[j] - xa) / (xb - xa) * (px1 - px0);
+      var Y = py1 + (ya - (-p.il[j])) / (ya - yb) * (py0 - py1);
+      if (j === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+    }
+    ctx.stroke(); ctx.restore();
+    return p;
+  }
+  function draw() {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var px0 = 62, px1 = 392, py0 = 335, py1 = 28, xa = 0, xb = 4, ya = 0, yb = -60;
+    function X(x) { return px0 + (x - xa) / (xb - xa) * (px1 - px0); }
+    function Y(y) { return py1 + (ya - y) / (ya - yb) * (py0 - py1); }
+    ctx.lineWidth = 1;
+    for (var d = 0; d >= -60; d -= 10) {
+      ctx.strokeStyle = "#e4e4e4"; ctx.beginPath(); ctx.moveTo(px0, Y(d)); ctx.lineTo(px1, Y(d)); ctx.stroke();
+      label((d === 0 ? "0" : "−" + (-d)), px0 - 8, Y(d), INK, "12px " + SANS, "right");
+    }
+    ctx.strokeStyle = "#444"; ctx.beginPath(); ctx.moveTo(px0, py1); ctx.lineTo(px0, py0); ctx.lineTo(px1, py0); ctx.stroke();
+    for (var k = 0; k <= 4; k++) { ctx.beginPath(); ctx.moveTo(X(k), py0); ctx.lineTo(X(k), py0 + 5); ctx.stroke(); label(k + "", X(k), py0 + 15, INK, "12px " + SANS, "center"); }
+    label("ω/ωc", px1 - 4, py0 + 33, INK, "italic 15px " + SERIF, "right");
+    label("|S21| (dB)", px0 + 6, py1 - 13, INK, "14px " + SERIF, "left");
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = GREY;
+    ctx.beginPath(); ctx.moveTo(X(1), py0); ctx.lineTo(X(1), py1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(2), py0); ctx.lineTo(X(2), py1); ctx.stroke();
+    ctx.setLineDash([]);
+    var p = curve(xa, xb, ya, yb, px0, px1, py0, py1, 2.4);
+
+    var pts = [[1, -p.il1], [2, -p.il2]];
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i][1] < yb) continue;
+      ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(X(pts[i][0]), Y(pts[i][1]), 5, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+    }
+
+    var qx0 = 432, qx1 = 548, qy0 = 190, qy1 = 62;
+    ctx.strokeStyle = "#444"; ctx.lineWidth = 1; ctx.strokeRect(qx0, qy1, qx1 - qx0, qy0 - qy1);
+    label("통과대역 확대", qx0 + 2, qy1 - 12, "#333", "13px " + SANS, "left");
+    function QY(y) { return qy1 + (0.5 - y) / 4.5 * (qy0 - qy1); }
+    for (var e = 0; e >= -4; e -= 1) {
+      ctx.strokeStyle = "#ececec"; ctx.beginPath(); ctx.moveTo(qx0, QY(e)); ctx.lineTo(qx1, QY(e)); ctx.stroke();
+      if (e === 0 || e === -3) label((e === 0 ? "0" : "−3"), qx0 - 5, QY(e), INK, "12px " + SANS, "right");
+    }
+    label("1", qx0 + (1 / 1.2) * (qx1 - qx0), qy0 + 11, INK, "12px " + SANS, "center");
+    label("ω/ωc", qx1, qy0 + 26, INK, "italic 13px " + SERIF, "right");
+    curve(0, 1.2, 0.5, -4, qx0, qx1, qy0, qy1, 1.8);
+
+    setText("lpf-il1", p.il1.toFixed(1)); setText("lpf-il2", p.il2.toFixed(1)); setText("lpf-p2", fmtRatio(p.plr2));
+    var hint;
+    if (rip === 0) hint = "최대평탄: 통과대역에서 삽입손실이 평평하고, 차단주파수에서 3 dB 입니다";
+    else if (N === 1) hint = "차수 1 에서는 삽입손실이 오르내리지 않습니다. ωc 는 삽입손실이 " + rip + " dB 가 되는 주파수입니다";
+    else if (N % 2 === 0) hint = "짝수 차수의 등리플 응답은 ω = 0 에서 삽입손실이 " + rip + " dB 입니다. 부하 저항이 전원 저항과 달라야 만들 수 있습니다";
+    else hint = "등리플: 통과대역에서 삽입손실이 0 dB 와 " + rip + " dB 사이를 오르내립니다. ωc 는 통과대역이 끝나는 주파수입니다";
+    setText("lpf-hint", hint);
+    setText("lpf-lab1", rip === 0 ? "차단주파수에서" : "통과대역이 끝나는 주파수에서");
+    setText("lpf-lab2", rip === 0 ? "차단주파수의 2배에서" : "그 주파수의 2배에서");
+  }
+  sn.addEventListener("input", function () { N = Math.round(parseFloat(sn.value)); snv.textContent = N + ""; draw(); });
+  sn.addEventListener("keydown", function (e) { e.stopPropagation(); });
+  radios.forEach(function (r) { if (r) r.addEventListener("change", function () { if (r.checked) { rip = parseFloat(r.value); draw(); } }); });
+  draw();
+  window.addEventListener("load", draw);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
