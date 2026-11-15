@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 공간에서 본 원형 편파 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 공간에서 본 원형 편파</h1>
+<div class="과목">전자기학 2</div>
+</header>
+
+<main>
+<div style="text-align:center">
+<div style="overflow-x:auto">
+<svg id="원형편파공간" data-widget viewBox="0 0 960 470" role="img" aria-label="전기장 화살표의 끝이 z 축을 따라 나사선을 이루는 그림" style="display:block;width:100%;max-width:860px;min-width:680px;margin:0 auto"></svg>
+</div>
+<div id="원형편파공간-조작"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var svg = document.getElementById('원형편파공간'), bar = document.getElementById('원형편파공간-조작');
+  if (!svg || !bar || !svg.createSVGPoint) return;
+
+  function physics(z, t, opt) {
+    var th = 2 * Math.PI * (t - z);
+    return { Ex: Math.cos(th), Ey: Math.cos(th + opt.phi) };
+  }
+
+  function step(t, dt, speed) {
+    return t + Math.max(0, Math.min(0.1, dt)) * speed;
+  }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var BLUE = '#0072B2', ORANGE = '#E69F00', INK = '#1c1c1c', GREY = '#555';
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif';
+  var SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
+
+  var O = [235, 262], SZ = 282, A = 92, YX = -1.05, YY = 0.30;
+  function P(x, y, z) { return [O[0] + SZ * z + YX * A * y, O[1] - A * x + YY * A * y]; }
+
+  function el(tag, at, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in at) e.setAttribute(k, at[k]);
+    (parent || svg).appendChild(e);
+    return e;
+  }
+
+  function text(x, y, s, at, parent) {
+    var t = el('text', Object.assign({ x: x, y: y, 'font-size': 17, fill: INK, 'font-family': SANS }, at || {}), parent);
+    var re = /_\{([a-z]*)([0-9]*)\}|(cos|sin)|([A-Za-zωλη]+)|([^A-Za-zωλη_]+|_)/g, m, drop = false;
+    function span(str, a) { var ts = el('tspan', a, t); ts.textContent = str; }
+    while ((m = re.exec(s))) {
+      if (m[1] !== undefined) {
+        var first = true;
+        if (m[1]) { span(m[1], { 'font-size': '76%', dy: 5, 'font-family': SERIF, 'font-style': 'italic' }); first = false; }
+        if (m[2]) span(m[2], first ? { 'font-size': '76%', dy: 5, 'font-family': SERIF } : { 'font-size': '76%', 'font-family': SERIF });
+        drop = true; continue;
+      }
+      var a = drop ? { dy: -5 } : {};
+      if (m[4] !== undefined) { a['font-family'] = SERIF; a['font-style'] = 'italic'; a['font-size'] = '112%'; }
+      span(m[0], a); drop = false;
+    }
+    return t;
+  }
+  function line(a, b, at, parent) { return el('line', Object.assign({ x1: a[0], y1: a[1], x2: b[0], y2: b[1] }, at), parent); }
+  function head(a, b, size) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+    if (L < size * 1.2) return '';
+    var ux = dx / L, uy = dy / L, w = size * 0.42;
+    return 'M' + b[0].toFixed(1) + ' ' + b[1].toFixed(1) +
+      'L' + (b[0] - ux * size - uy * w).toFixed(1) + ' ' + (b[1] - uy * size + ux * w).toFixed(1) +
+      'L' + (b[0] - ux * size + uy * w).toFixed(1) + ' ' + (b[1] - uy * size - ux * w).toFixed(1) + 'Z';
+  }
+  function pathOf(pts) { return pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(''); }
+
+  var axis = { stroke: INK, 'stroke-width': 1.4 };
+  var zEnd = P(0, 0, 2.46), xEnd = P(1.5, 0, 0), yEnd = P(0, 1.6, 0);
+  line(P(0, 0, -0.06), zEnd, axis); el('path', { d: head(P(0, 0, 2.2), zEnd, 11), fill: INK });
+  line(P(-1.3, 0, 0), xEnd, axis);  el('path', { d: head(P(0, 0, 0), xEnd, 11), fill: INK });
+  line(P(0, -1.3, 0), yEnd, axis);  el('path', { d: head(P(0, 0, 0), yEnd, 11), fill: INK });
+  text(zEnd[0] + 8, zEnd[1] + 6, 'z');
+  text(xEnd[0] - 5, xEnd[1] - 8, 'x');
+  text(yEnd[0] - 16, yEnd[1] + 16, 'y');
+  text(P(0, 0, 2.08)[0], zEnd[1] - 12, '진행 방향', { 'font-size': 17, fill: INK });
+
+  var gComp = el('g', {});
+  line([250, 26], [294, 26], { stroke: BLUE, 'stroke-width': 3.2 });
+  text(304, 32, '전기장 (두 성분의 합): 한 순간에 파란 화살표의 끝을 이으면 나사선', { fill: INK });
+  var legend = el('g', {}, gComp);
+  line([250, 54], [294, 54], { stroke: GREY, 'stroke-width': 2 }, legend);
+  text(304, 60, 'E_{x} = E_{0} cos(ωt − k_{0}z)', { fill: INK, 'font-size': 17 }, legend);
+  line([560, 54], [604, 54], { stroke: ORANGE, 'stroke-width': 2, 'stroke-dasharray': '8 5' }, legend);
+  var eyText = el('g', {}, legend);
+
+  var Z0 = 1;
+  el('path', { d: pathOf([P(1.3, 1.3, Z0), P(1.3, -1.3, Z0), P(-1.3, -1.3, Z0), P(-1.3, 1.3, Z0)]) + 'Z', fill: '#0072B2', 'fill-opacity': 0.06, stroke: GREY, 'stroke-width': 1 });
+  var ring = [];
+  for (var k = 0; k <= 72; k++) ring.push(P(Math.cos(k * Math.PI / 36), Math.sin(k * Math.PI / 36), Z0));
+  el('path', { d: pathOf(ring), fill: 'none', stroke: INK, 'stroke-width': 1.3, 'stroke-dasharray': '3 3' });
+  var c0 = P(-1.3, 1.3, Z0);
+  text(c0[0] + 4, c0[1] + 18, 'z = λ 인 평면: 시간이 흐르면 주황 화살표의 끝이 원을 그림', { 'font-size': 16, fill: INK });
+  var turnArc = el('path', { fill: 'none', stroke: INK, 'stroke-width': 2.2 });
+  var turnHead = el('path', { fill: INK });
+
+  var compX = el('path', { fill: 'none', stroke: GREY, 'stroke-width': 1.6 }, gComp);
+  var compY = el('path', { fill: 'none', stroke: ORANGE, 'stroke-width': 1.8, 'stroke-dasharray': '8 5', opacity: 0.9 }, gComp);
+  var helix = el('path', { fill: 'none', stroke: BLUE, 'stroke-width': 2.8 });
+  var N = 32, arrows = [], heads = el('path', { fill: BLUE });
+  for (var i = 0; i <= N; i++) arrows.push(el('line', { stroke: BLUE, 'stroke-width': 1.5 }));
+  var mark = el('line', { stroke: ORANGE, 'stroke-width': 4.5, 'stroke-linecap': 'round' });
+  var markHead = el('path', { fill: ORANGE, stroke: INK, 'stroke-width': 0.8 });
+
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:4px;font-size:17px;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  function mk(tag, css, parent) { var e = document.createElement(tag); e.style.cssText = css || ''; (parent || bar).appendChild(e); return e; }
+  var BTN = 'font:inherit;padding:6px 16px;border:1.5px solid ' + INK + ';background:#fff;color:' + INK + ';border-radius:4px;cursor:pointer';
+  var ON = 'font:inherit;padding:5px 15px;border:2.5px solid ' + ORANGE + ';background:#fdebc8;color:' + INK + ';border-radius:4px;cursor:pointer;font-weight:bold';
+  var EX = '<i style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">E</i>' +
+           '<span style="font-family:&quot;Times New Roman&quot;,serif;font-style:italic;font-size:80%;vertical-align:sub;line-height:0">x</span>';
+  var EY = '<i style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">E</i>' +
+           '<span style="font-family:&quot;Times New Roman&quot;,serif;font-style:italic;font-size:80%;vertical-align:sub;line-height:0">y</span>';
+  var btn = mk('button', BTN + ';min-width:96px'); btn.type = 'button';
+  var bLag = mk('button', BTN); bLag.type = 'button'; bLag.innerHTML = EY + ' 의 위상이 ' + EX + ' 보다 90° 늦음';
+  var bLead = mk('button', BTN); bLead.type = 'button'; bLead.innerHTML = EY + ' 의 위상이 ' + EX + ' 보다 90° 앞섬';
+  var lab = mk('label', 'display:inline-flex;align-items:center;gap:6px;cursor:pointer');
+  var comp = mk('input', 'width:18px;height:18px;margin:0;accent-color:' + BLUE, lab); comp.type = 'checkbox'; comp.checked = true;
+  lab.appendChild(document.createTextNode('두 성분 보이기'));
+  var turn = document.createElement('div');
+  turn.style.cssText = 'margin-top:6px;font-size:18px;font-weight:bold;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  bar.parentNode.appendChild(turn);
+  var note = document.createElement('div');
+  note.style.cssText = 'margin-top:2px;font-size:15px;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  note.innerHTML = '회전 방향은 ' + '<i style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">z</i>' + ' 축 화살표의 끝에서 원점 쪽을 바라보고 판정함 (그림은 비스듬히 본 모습)';
+  bar.parentNode.appendChild(note);
+
+  var phi = -Math.PI / 2;
+  function setPhi(v) {
+    phi = v;
+    var lag = phi < 0;
+    bLag.style.cssText = lag ? ON : BTN; bLead.style.cssText = lag ? BTN : ON;
+    turn.textContent = lag
+      ? '다가오는 파를 마주 보면 전기장이 반시계 방향으로 돎 (오른쪽 원형 편파)'
+      : '다가오는 파를 마주 보면 전기장이 시계 방향으로 돎 (왼쪽 원형 편파)';
+    while (eyText.firstChild) eyText.removeChild(eyText.firstChild);
+    text(614, 60, 'E_{y} = E_{0} cos(ωt − k_{0}z ' + (lag ? '− 90°)' : '+ 90°)'), { fill: INK, 'font-size': 17 }, eyText);
+
+    var s = lag ? 1 : -1, pts = [];
+    for (var j = 0; j <= 20; j++) { var a = s * (10 + 50 * j / 20) * Math.PI / 180; pts.push(P(1.2 * Math.cos(a), 1.2 * Math.sin(a), Z0)); }
+    turnArc.setAttribute('d', pathOf(pts));
+    turnHead.setAttribute('d', head(pts[12], pts[20], 12));
+  }
+
+  function setLine(node, a, b) { node.setAttribute('x1', a[0].toFixed(1)); node.setAttribute('y1', a[1].toFixed(1)); node.setAttribute('x2', b[0].toFixed(1)); node.setAttribute('y2', b[1].toFixed(1)); }
+
+  function draw(t) {
+    var opt = { phi: phi }, hx = [], cx = [], cy = [], i, z, f, hd = '';
+    for (i = 0; i <= 240; i++) {
+      z = 2 * i / 240; f = physics(z, t, opt);
+      hx.push(P(f.Ex, f.Ey, z)); cx.push(P(f.Ex, 0, z)); cy.push(P(0, f.Ey, z));
+    }
+    helix.setAttribute('d', pathOf(hx)); compX.setAttribute('d', pathOf(cx)); compY.setAttribute('d', pathOf(cy));
+    for (i = 0; i <= N; i++) {
+      z = 2 * i / N; f = physics(z, t, opt);
+      var base = P(0, 0, z), tip = P(f.Ex, f.Ey, z);
+      setLine(arrows[i], base, tip); hd += head(base, tip, 8);
+    }
+    heads.setAttribute('d', hd);
+    f = physics(Z0, t, opt);
+    var b0 = P(0, 0, Z0), t0 = P(f.Ex, f.Ey, Z0);
+    setLine(mark, b0, t0); markHead.setAttribute('d', head(b0, t0, 14));
+  }
+
+  var SPEED = 1 / 5;
+  var q = new URLSearchParams(location.search);
+  var frozen = q.has('t') && isFinite(parseFloat(q.get('t')));
+  var printView = q.get('view') === 'print' || q.has('print-pdf');
+  var t = frozen ? parseFloat(q.get('t')) : 0.10, playing = !frozen && !printView, last = null;
+
+  function show() { draw(t); btn.textContent = playing ? '멈춤' : '재생'; gComp.setAttribute('display', comp.checked ? 'inline' : 'none'); }
+  btn.addEventListener('click', function () { playing = !playing; last = null; show(); btn.blur(); });
+  bLag.addEventListener('click', function () { setPhi(-Math.PI / 2); show(); bLag.blur(); });
+  bLead.addEventListener('click', function () { setPhi(Math.PI / 2); show(); bLead.blur(); });
+  comp.addEventListener('change', function () { show(); comp.blur(); });
+
+  function tick(now) {
+    if (playing) {
+      if (last !== null) t = step(t, (now - last) / 1000, SPEED);
+      last = now; show();
+    } else last = null;
+    requestAnimationFrame(tick);
+  }
+  svg.__state = function () { return { t: t, playing: playing, phi: phi }; };
+  setPhi(q.get('phi') === 'lead' ? Math.PI / 2 : -Math.PI / 2);
+  show();
+  requestAnimationFrame(tick);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
