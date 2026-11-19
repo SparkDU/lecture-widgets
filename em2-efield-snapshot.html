@@ -69,7 +69,7 @@
   }
 
   var NS = 'http://www.w3.org/2000/svg';
-  var BLUE = '#0072B2', INK = '#1c1c1c';
+  var BLUE = '#0072B2', INK = '#1c1c1c', GREY = '#777';
   var SERIF = '"Times New Roman", "Nimbus Roman", serif';
   var SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
 
@@ -119,13 +119,23 @@
   text(ZX - 22, 70, 'x');
   text(ZX, gy(-1) + 28, 'z = 0', { 'text-anchor': 'middle' });
 
-  var gStill = el('g', {}), gRun = el('g', { display: 'none' });
-  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, gStill);
-  text(354, 328, '시간을 멈춘 순간 (t = 0), 화살표 끝을 이은 선:  E_{x} = E_{x0} cos(k_{0}z)', {}, gStill);
-  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, gRun);
-  text(354, 328, '시간이 흐를 때, 화살표 끝을 이은 선:  E_{x} = E_{x0} cos(ωt − k_{0}z)', {}, gRun);
+  var dots = { stroke: GREY, 'stroke-width': 1, 'stroke-dasharray': '3 4' };
+  [1, -1].forEach(function (s) {
+    line([ZX, gy(s)], [878, gy(s)], dots);
+    text(884, gy(s) + 6, (s > 0 ? '' : '−') + 'E_{x0}');
+  });
+  [1, 2].forEach(function (k) {
+    line([zx(k), gy(1)], [zx(k), gy(-1) + 6], dots);
+    text(zx(k), gy(-1) + 28, (k > 1 ? k : '') + 'λ', { 'text-anchor': 'middle' });
+  });
 
-  var curve = el('path', { fill: 'none', stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4', opacity: 0.8 });
+  var gStill = el('g', {}), gRun = el('g', { display: 'none' });
+  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2.2 }, gStill);
+  text(354, 328, '시간을 멈춘 한 순간 (t = 0), 화살표 끝을 이은 곡선:  E_{x} = E_{x0} cos(k_{0}z)', {}, gStill);
+  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2.2 }, gRun);
+  text(354, 328, '시간이 흐를 때, 화살표 끝을 이은 곡선:  E_{x} = E_{x0} cos(ωt − k_{0}z)', {}, gRun);
+
+  var curve = el('path', { fill: 'none', stroke: BLUE, 'stroke-width': 2.2, opacity: 0.75 });
   var arrows = [], heads = el('path', { fill: BLUE });
   for (var i = 0; i <= NV; i++) arrows.push(el('line', { stroke: BLUE, 'stroke-width': i ? 2.2 : 5 }));
   var lam = el('path', { fill: 'none', stroke: INK, 'stroke-width': 1.3 });
