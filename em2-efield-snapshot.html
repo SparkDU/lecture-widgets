@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 한 순간에 본 전기장 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 한 순간에 본 전기장</h1>
+<div class="과목">전자기학 2</div>
+</header>
+
+<main>
+<div style="text-align:center">
+<div style="overflow-x:auto">
+<svg id="한순간전기장" data-widget viewBox="0 0 960 336" role="img" aria-label="z 축을 따라 줄지어 선 전기장 화살표와 그 끝을 이은 코사인 곡선. 시간을 흐르게 하면 모양이 z 방향으로 옮겨 가는 그림" style="display:block;width:100%;max-width:1000px;min-width:680px;margin:0 auto"></svg>
+</div>
+<div id="한순간전기장-조작"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var svg = document.getElementById('한순간전기장'), bar = document.getElementById('한순간전기장-조작');
+  if (!svg || !bar || !svg.createSVGPoint) return;
+
+  function physics(z, t) {
+    return { Ex: Math.cos(2 * Math.PI * (t - z)) };
+  }
+
+  function step(t, dt, speed) {
+    return t + Math.max(0, Math.min(0.1, dt)) * speed;
+  }
+
+  function crest(t) {
+    return t - Math.floor(t);
+  }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var BLUE = '#0072B2', INK = '#1c1c1c';
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif';
+  var SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
+
+  var ZX = 120, Y0 = 172, AMP = 92, LAM = 300, NV = 20, ZMAX = 2.5;
+  function zx(z) { return ZX + LAM * z; }
+  function gy(v) { return Y0 - AMP * v; }
+
+  function el(tag, at, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in at) e.setAttribute(k, at[k]);
+    (parent || svg).appendChild(e);
+    return e;
+  }
+
+  function text(x, y, s, at, parent) {
+    var t = el('text', Object.assign({ x: x, y: y, 'font-size': 17, fill: INK, 'font-family': SANS }, at || {}), parent);
+    var re = /_\{([a-z]*)([0-9]*)\}|(cos|sin)|([A-Za-zωλη]+)|([^A-Za-zωλη_]+|_)/g, m, drop = false;
+    function span(str, a) { var ts = el('tspan', a, t); ts.textContent = str; }
+    while ((m = re.exec(s))) {
+      if (m[1] !== undefined) {
+        var first = true;
+        if (m[1]) { span(m[1], { 'font-size': '76%', dy: 5, 'font-family': SERIF, 'font-style': 'italic' }); first = false; }
+        if (m[2]) span(m[2], first ? { 'font-size': '76%', dy: 5, 'font-family': SERIF } : { 'font-size': '76%', 'font-family': SERIF });
+        drop = true; continue;
+      }
+      var a = drop ? { dy: -5 } : {};
+      if (m[4] !== undefined) { a['font-family'] = SERIF; a['font-style'] = 'italic'; a['font-size'] = '112%'; }
+      span(m[0], a); drop = false;
+    }
+    return t;
+  }
+  function line(a, b, at) { return el('line', Object.assign({ x1: a[0], y1: a[1], x2: b[0], y2: b[1] }, at)); }
+  function setLine(node, a, b) { node.setAttribute('x1', a[0].toFixed(1)); node.setAttribute('y1', a[1].toFixed(1)); node.setAttribute('x2', b[0].toFixed(1)); node.setAttribute('y2', b[1].toFixed(1)); }
+  function head(a, b, size) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+    if (L < size * 1.2) return '';
+    var ux = dx / L, uy = dy / L, w = size * 0.42;
+    return 'M' + b[0].toFixed(1) + ' ' + b[1].toFixed(1) +
+      'L' + (b[0] - ux * size - uy * w).toFixed(1) + ' ' + (b[1] - uy * size + ux * w).toFixed(1) +
+      'L' + (b[0] - ux * size + uy * w).toFixed(1) + ' ' + (b[1] - uy * size - ux * w).toFixed(1) + 'Z';
+  }
+
+  var axis = { stroke: INK, 'stroke-width': 1.4 };
+  line([ZX - 22, Y0], [912, Y0], axis); el('path', { d: head([ZX, Y0], [912, Y0], 11), fill: INK });
+  text(920, Y0 + 6, 'z');
+  line([ZX, Y0 + 100], [ZX, 58], axis); el('path', { d: head([ZX, Y0], [ZX, 58], 11), fill: INK });
+  text(ZX - 22, 70, 'x');
+  text(ZX, gy(-1) + 28, 'z = 0', { 'text-anchor': 'middle' });
+
+  var gStill = el('g', {}), gRun = el('g', { display: 'none' });
+  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, gStill);
+  text(354, 328, '시간을 멈춘 순간 (t = 0), 화살표 끝을 이은 선:  E_{x} = E_{x0} cos(k_{0}z)', {}, gStill);
+  line([300, 322], [344, 322], { stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4' }, gRun);
+  text(354, 328, '시간이 흐를 때, 화살표 끝을 이은 선:  E_{x} = E_{x0} cos(ωt − k_{0}z)', {}, gRun);
+
+  var curve = el('path', { fill: 'none', stroke: BLUE, 'stroke-width': 2, 'stroke-dasharray': '6 4', opacity: 0.8 });
+  var arrows = [], heads = el('path', { fill: BLUE });
+  for (var i = 0; i <= NV; i++) arrows.push(el('line', { stroke: BLUE, 'stroke-width': i ? 2.2 : 5 }));
+  var lam = el('path', { fill: 'none', stroke: INK, 'stroke-width': 1.3 });
+  var lamText = text(0, 30, 'λ', { 'text-anchor': 'middle', 'font-size': 19 });
+  var lamNote = text(0, 30, '(마루에서 다음 마루까지)', { 'text-anchor': 'middle', 'font-size': 15 });
+  var HS = 17, HT = 10;
+
+  function draw(t) {
+    var d = '', h = '', i, z, y, x, hd, size;
+    for (i = 0; i <= 250; i++) {
+      z = ZMAX * i / 250;
+      d += (i ? 'L' : 'M') + zx(z).toFixed(1) + ' ' + gy(physics(z, t).Ex).toFixed(1);
+    }
+    curve.setAttribute('d', d);
+    for (i = 0; i <= NV; i++) {
+      z = ZMAX * i / NV; x = zx(z); y = gy(physics(z, t).Ex); size = i ? HT : HS;
+      hd = head([x, Y0], [x, y], size); h += hd;
+      setLine(arrows[i], [x, Y0], [x, hd ? y + (y < Y0 ? 1 : -1) * size * 0.9 : y]);
+    }
+    heads.setAttribute('d', h);
+
+    var x1 = zx(crest(t)), x2 = zx(crest(t) + 1);
+    lam.setAttribute('d', 'M' + x1.toFixed(1) + ' 50L' + x1.toFixed(1) + ' 38L' + x2.toFixed(1) + ' 38L' + x2.toFixed(1) + ' 50');
+    lamText.setAttribute('x', ((x1 + x2) / 2).toFixed(1));
+    lamNote.setAttribute('x', ((x1 + x2) / 2 + 112).toFixed(1));
+  }
+
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:4px;font-size:17px;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  function mk(tag, css) { var e = document.createElement(tag); e.style.cssText = css || ''; bar.appendChild(e); return e; }
+  var SYM = '<i style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">';
+  var BTN = 'font:inherit;padding:6px 18px;border:1.5px solid ' + INK + ';background:#fff;color:' + INK + ';border-radius:4px;cursor:pointer;min-width:132px';
+  var btn = mk('button', BTN), back = mk('button', BTN);
+  btn.type = 'button'; back.type = 'button'; back.textContent = '처음 순간으로';
+  var tval = mk('span', 'min-width:104px;text-align:left;font-variant-numeric:tabular-nums');
+
+  var SPEED = 1 / 4;
+  var q = new URLSearchParams(location.search);
+  var frozen = q.has('t') && isFinite(parseFloat(q.get('t')));
+  var t = frozen ? parseFloat(q.get('t')) : 0, playing = false, last = null;
+
+  function show() {
+    draw(t);
+    var still = !playing && t === 0;
+    gStill.setAttribute('display', still ? 'inline' : 'none');
+    gRun.setAttribute('display', still ? 'none' : 'inline');
+    tval.innerHTML = SYM + 't</i> = ' + t.toFixed(2) + ' ' + SYM + 'T</i>';
+    btn.textContent = playing ? '시간 멈춤' : '시간 흐르게';
+  }
+  btn.addEventListener('click', function () { playing = !playing; last = null; show(); btn.blur(); });
+  back.addEventListener('click', function () { playing = false; t = 0; last = null; show(); back.blur(); });
+
+  function tick(now) {
+    if (playing) {
+      if (last !== null) t = step(t, (now - last) / 1000, SPEED);
+      last = now; show();
+    } else last = null;
+    requestAnimationFrame(tick);
+  }
+  svg.__state = function () { return { t: t, playing: playing }; };
+  show();
+  requestAnimationFrame(tick);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
