@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 오일러 식이 그리는 나선 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 오일러 식이 그리는 나선</h1>
+<div class="과목">전자기학 2</div>
+</header>
+
+<main>
+<div style="text-align:center">
+<div style="overflow-x:auto">
+<svg id="오일러나선" data-widget viewBox="0 0 960 440" role="img" aria-label="실수축, 허수축, 세타 축으로 그린 나선. 보는 방향을 바꿀 수 있다" style="display:block;width:100%;max-width:800px;min-width:680px;margin:0 auto"></svg>
+</div>
+<div id="오일러나선-조작"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function physics(theta) {
+    return { re: Math.cos(theta), im: Math.sin(theta) };
+  }
+
+  var VIEWS = {
+    oblique: { r: [-0.40, 0, 1], p: [-0.56, 1, 0] },
+    front:   { r: [1, 0, 0], p: [0, 1, 0] },
+    side:    { r: [0, 0, 1], p: [0, 1, 0] },
+    bottom:  { r: [0, 0, 1], p: [1, 0, 0] }
+  };
+  var TH_MAX = 4 * Math.PI, WS = 318 / 92 / (2 * Math.PI);
+  function frame(v) { return { r: v.r.slice(), p: v.p.slice() }; }
+  function mix(a, b, k) {
+    return { r: [a.r[0] + (b.r[0] - a.r[0]) * k, a.r[1] + (b.r[1] - a.r[1]) * k, a.r[2] + (b.r[2] - a.r[2]) * k],
+             p: [a.p[0] + (b.p[0] - a.p[0]) * k, a.p[1] + (b.p[1] - a.p[1]) * k, a.p[2] + (b.p[2] - a.p[2]) * k] };
+  }
+
+  function project(f, re, im, theta) {
+    var w = (theta - TH_MAX / 2) * WS;
+    return [f.r[0] * re + f.r[1] * im + f.r[2] * w, f.p[0] * re + f.p[1] * im + f.p[2] * w];
+  }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var BLUE = '#0072B2', ORANGE = '#E69F00', INK = '#1c1c1c', GREY = '#777', PALE = '#a9c9e0';
+  var SANS = '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif', SERIF = '"Times New Roman",serif';
+  var svg = document.getElementById('오일러나선'), box = document.getElementById('오일러나선-조작');
+  if (!svg || !box) return;
+  var CX = 480, CY = 232, R = 92;
+  function S(f, re, im, th) { var q = project(f, re, im, th); return [CX + R * q[0], CY - R * q[1]]; }
+
+  function el(tag, at, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in at) e.setAttribute(k, at[k]);
+    (parent || svg).appendChild(e);
+    return e;
+  }
+  function pathOf(pts) { return pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(''); }
+  function head(a, b, size) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+    if (L < size * 1.2) return '';
+    var ux = dx / L, uy = dy / L, w = size * 0.42;
+    return 'M' + b[0].toFixed(1) + ' ' + b[1].toFixed(1) +
+      'L' + (b[0] - ux * size - uy * w).toFixed(1) + ' ' + (b[1] - uy * size + ux * w).toFixed(1) +
+      'L' + (b[0] - ux * size + uy * w).toFixed(1) + ' ' + (b[1] - uy * size - ux * w).toFixed(1) + 'Z';
+  }
+
+  var shadowG = el('g', {});
+  var shCos = el('path', { fill: 'none', stroke: GREY, 'stroke-width': 1.8 }, shadowG);
+  var shSin = el('path', { fill: 'none', stroke: ORANGE, 'stroke-width': 2, 'stroke-dasharray': '8 5' }, shadowG);
+  var shCosText = el('text', { 'font-size': 19, fill: '#444', 'font-family': SANS }, shadowG); shCosText.textContent = 'cos θ (실수부)';
+  var shSinText = el('text', { 'font-size': 19, fill: INK, 'font-family': SANS }, shadowG); shSinText.textContent = 'sin θ (허수부)';
+  var axes = { re: {}, im: {}, th: {} };
+  ['re', 'im', 'th'].forEach(function (k) {
+    axes[k].line = el('line', { stroke: INK, 'stroke-width': 1.4 });
+    axes[k].head = el('path', { fill: INK });
+    axes[k].text = el('text', { 'font-size': 20, fill: INK, 'font-family': SANS });
+  });
+  axes.re.text.textContent = '실수축'; axes.im.text.textContent = '허수축'; axes.th.text.textContent = 'θ';
+  axes.th.text.setAttribute('font-style', 'italic'); axes.th.text.setAttribute('font-size', 24); axes.th.text.setAttribute('font-family', SERIF);
+  var ticks = [1, 2, 3, 4].map(function (n) {
+    var t = el('text', { 'font-size': 17, fill: GREY, 'text-anchor': 'middle', 'font-family': SERIF }); t.textContent = (n === 1 ? '' : n) + 'π';
+    return { n: n, mark: el('line', { stroke: GREY, 'stroke-width': 1.2 }), text: t };
+  });
+  var helixAll = el('path', { fill: 'none', stroke: PALE, 'stroke-width': 2 });
+  var helixNow = el('path', { fill: 'none', stroke: BLUE, 'stroke-width': 3.2, 'stroke-linecap': 'round' });
+  var arm = el('line', { stroke: INK, 'stroke-width': 2.2 });
+  var armHead = el('path', { fill: INK });
+  var dotNow = el('circle', { r: 7, fill: ORANGE, stroke: INK, 'stroke-width': 1.2 });
+  var dotText = el('text', { 'font-size': 23, fill: INK, 'font-style': 'italic', 'font-family': SERIF });
+  el('tspan', {}, dotText).textContent = 'e';
+  el('tspan', { 'font-size': '72%', dy: -7 }, dotText).textContent = 'jθ';
+
+  var ROW = 'display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:5px;font-size:16px;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  var BTN = 'font:inherit;padding:5px 14px;border:1.5px solid ' + INK + ';background:#fff;color:' + INK + ';border-radius:4px;cursor:pointer';
+  var ON = 'font:inherit;padding:4px 13px;border:2.5px solid ' + ORANGE + ';background:#fdebc8;color:' + INK + ';border-radius:4px;cursor:pointer;font-weight:bold';
+
+  function sym(c) { return '<span style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">' + c + '</span>'; }
+  function sup(c) { return '<span style="font-family:&quot;Times New Roman&quot;,serif;font-style:italic;font-size:80%;vertical-align:super;line-height:0">' + c + '</span>'; }
+  function mk(tag, css, parent) { var e = document.createElement(tag); e.style.cssText = css || ''; parent.appendChild(e); return e; }
+  var row = mk('div', ROW, box);
+  var btn = mk('button', BTN + ';min-width:84px', row); btn.type = 'button';
+  mk('span', 'margin-left:8px', row).textContent = '보는 방향:';
+  var names = ['oblique', 'front', 'side', 'bottom'], vLabel = { oblique: '비스듬히', front: '앞에서', side: '옆에서', bottom: '밑에서' }, vBtn = {};
+  names.forEach(function (n) { vBtn[n] = mk('button', BTN, row); vBtn[n].type = 'button'; vBtn[n].textContent = vLabel[n]; });
+  var bTour = mk('button', BTN, row); bTour.type = 'button'; bTour.textContent = '차례로 보기';
+  var lab = mk('label', 'display:inline-flex;align-items:center;gap:6px;cursor:pointer', row);
+  var shadow = mk('input', 'width:18px;height:18px;margin:0;accent-color:' + BLUE, lab); shadow.type = 'checkbox'; shadow.checked = true;
+  lab.appendChild(document.createTextNode('그림자 보이기'));
+  var LINE = 'line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  var cap = mk('div', 'margin-top:6px;font-size:18px;font-weight:bold;' + LINE, box);
+  var num = mk('div', 'margin-top:2px;font-size:16px;font-variant-numeric:tabular-nums;' + LINE, box);
+  var note = mk('div', 'margin-top:2px;font-size:15px;color:#555;line-height:1.3;font-family:' + SANS, box);
+  var EJ = sym('e') + sup('jθ'), TH = sym('θ');
+  note.innerHTML = '원형 편파와 이어 보기: 실수축에 ' + sym('x') + ' 축, 허수축에 ' + sym('y') + ' 축, ' + TH + ' 에 ' + sym('ωt') + ' − ' + sym('k') +
+    '<span style="font-family:&quot;Times New Roman&quot;,serif;font-size:75%;vertical-align:sub;line-height:0">0</span>' + sym('z') + ' 를 놓으면 전기장 화살표의 끝이 그리는 나선과 같은 모양';
+
+  var q = new URLSearchParams(location.search);
+  var SPEED = Math.PI / 2;
+  var CAP = {
+    oblique: '비스듬히 보면: 한 점이 원을 돌면서 ' + TH + ' 축을 따라 나아감 → 나선',
+    front: '앞에서 보면 (' + TH + ' 축을 따라 봄): 원. 복소평면 위의 ' + EJ,
+    side: '옆에서 보면 (실수축을 따라 봄): sin ' + TH + ' 곡선. 허수부',
+    bottom: '밑에서 보면 (허수축을 따라 봄): cos ' + TH + ' 곡선. 실수부'
+  };
+  var printView = q.get('view') === 'print' || q.has('print-pdf');
+  var view = names.indexOf(q.get('view')) >= 0 ? q.get('view') : 'oblique';
+  var fromF = frame(VIEWS[view]), toF = fromF, turn = 1, curF = fromF;
+  var frozen = q.has('t') && isFinite(parseFloat(q.get('t')));
+  var theta = frozen ? parseFloat(q.get('t')) * SPEED : 2.75 * Math.PI, playing = !frozen && !printView, tour = false, tourT = 0, tourI = 0, last = null;
+  var TOUR = [['oblique', 5], ['front', 4], ['side', 4], ['bottom', 4], ['oblique', 4]];
+  var TURN_SEC = 1.3;
+
+  function setView(name) {
+    if (name === view && turn >= 1) return;
+    fromF = curF; toF = frame(VIEWS[name]); turn = 0; view = name;
+  }
+  function ease(k) { return k * k * (3 - 2 * k); }
+
+  function draw() {
+    var f = curF, i, th, a, b;
+
+    function axis(k, p0, p1, labelShift) {
+      a = S(f, p0[0], p0[1], p0[2]); b = S(f, p1[0], p1[1], p1[2]);
+      var len = Math.hypot(b[0] - a[0], b[1] - a[1]), on = len > 34;
+      axes[k].line.setAttribute('x1', a[0].toFixed(1)); axes[k].line.setAttribute('y1', a[1].toFixed(1));
+      axes[k].line.setAttribute('x2', b[0].toFixed(1)); axes[k].line.setAttribute('y2', b[1].toFixed(1));
+      axes[k].head.setAttribute('d', on ? head(a, b, 11) : '');
+      axes[k].line.setAttribute('opacity', on ? 1 : 0); axes[k].text.setAttribute('opacity', on ? 1 : 0);
+      var ux = (b[0] - a[0]) / (len || 1), uy = (b[1] - a[1]) / (len || 1);
+      axes[k].text.setAttribute('x', (b[0] + ux * 10 + labelShift[0]).toFixed(1)); axes[k].text.setAttribute('y', (b[1] + uy * 10 + labelShift[1]).toFixed(1));
+      axes[k].text.setAttribute('text-anchor', ux < -0.3 ? 'end' : (ux > 0.3 ? 'start' : 'middle'));
+    }
+    axis('re', [-1.35, 0, 0], [1.4, 0, 0], [0, 5]);
+    axis('im', [0, -1.35, 0], [0, 1.55, 0], [0, 0]);
+    axis('th', [0, 0, -0.5], [0, 0, TH_MAX + 1.1], [0, 6]);
+    var thLen = Math.hypot(S(f, 0, 0, TH_MAX)[0] - S(f, 0, 0, 0)[0], S(f, 0, 0, TH_MAX)[1] - S(f, 0, 0, 0)[1]);
+    ticks.forEach(function (tk) {
+      var c = S(f, 0, 0, tk.n * Math.PI), on = thLen > 200 ? 1 : 0;
+      tk.mark.setAttribute('x1', c[0].toFixed(1)); tk.mark.setAttribute('y1', (c[1] - 5).toFixed(1));
+      tk.mark.setAttribute('x2', c[0].toFixed(1)); tk.mark.setAttribute('y2', (c[1] + 5).toFixed(1));
+      tk.text.setAttribute('x', c[0].toFixed(1)); tk.text.setAttribute('y', (c[1] + 24).toFixed(1));
+      tk.mark.setAttribute('opacity', on); tk.text.setAttribute('opacity', on);
+    });
+
+    var all = [], now = [], cs = [], sn = [], v;
+    for (i = 0; i <= 320; i++) {
+      th = TH_MAX * i / 320; v = physics(th);
+      all.push(S(f, v.re, v.im, th));
+      cs.push(S(f, v.re, 0, th)); sn.push(S(f, 0, v.im, th));
+      if (th <= theta) now.push(all[i]);
+    }
+    v = physics(theta);
+    var pNow = S(f, v.re, v.im, theta), base = S(f, 0, 0, theta);
+    now.push(pNow);
+    helixAll.setAttribute('d', pathOf(all)); helixNow.setAttribute('d', pathOf(now));
+    shCos.setAttribute('d', pathOf(cs)); shSin.setAttribute('d', pathOf(sn));
+
+    a = S(f, 1, 0, 2 * Math.PI); b = S(f, 0, 1, 0.5 * Math.PI);
+    shCosText.setAttribute('x', (a[0] + 8).toFixed(1)); shCosText.setAttribute('y', (a[1] - 8).toFixed(1));
+    shSinText.setAttribute('x', (b[0] + 8).toFixed(1)); shSinText.setAttribute('y', (b[1] - 8).toFixed(1));
+
+    var spanCos = Math.abs(S(f, 1, 0, 0)[1] - S(f, -1, 0, 0)[1]) + Math.abs(S(f, 1, 0, 0)[0] - S(f, -1, 0, 0)[0]);
+    var spanSin = Math.abs(S(f, 0, 1, 0)[1] - S(f, 0, -1, 0)[1]) + Math.abs(S(f, 0, 1, 0)[0] - S(f, 0, -1, 0)[0]);
+    shCosText.setAttribute('opacity', (thLen > 200 && spanCos > 60) ? 1 : 0);
+    shSinText.setAttribute('opacity', (thLen > 200 && spanSin > 60) ? 1 : 0);
+
+    arm.setAttribute('x1', base[0].toFixed(1)); arm.setAttribute('y1', base[1].toFixed(1));
+    arm.setAttribute('x2', pNow[0].toFixed(1)); arm.setAttribute('y2', pNow[1].toFixed(1));
+    armHead.setAttribute('d', head(base, pNow, 12));
+    dotNow.setAttribute('cx', pNow[0].toFixed(1)); dotNow.setAttribute('cy', pNow[1].toFixed(1));
+    dotText.setAttribute('x', (pNow[0] + 12).toFixed(1)); dotText.setAttribute('y', (pNow[1] - 10).toFixed(1));
+  }
+
+  function show() {
+    draw();
+    btn.textContent = playing ? '멈춤' : '재생';
+    names.forEach(function (n) { vBtn[n].style.cssText = (n === view ? ON : BTN); });
+    bTour.style.cssText = tour ? ON : BTN;
+    shadowG.setAttribute('display', shadow.checked ? 'inline' : 'none');
+    cap.innerHTML = CAP[view];
+    var v = physics(theta), deg = theta * 180 / Math.PI;
+    var sg = function (x) { return (x < 0 ? '−' : '') + Math.abs(x).toFixed(2); };
+    num.innerHTML = TH + ' = ' + deg.toFixed(0) + '° &emsp; cos ' + TH + ' = ' + sg(v.re) + ' &emsp; sin ' + TH + ' = ' + sg(v.im) +
+      ' &emsp; ' + EJ + ' = ' + sg(v.re) + (v.im < 0 ? ' − ' : ' + ') + sym('j') + Math.abs(v.im).toFixed(2);
+  }
+
+  function advance(dt) {
+    if (playing) { theta += SPEED * dt; if (theta > TH_MAX) theta -= TH_MAX; }
+    if (tour) {
+      tourT += dt;
+      if (tourT >= TOUR[tourI][1]) { tourT = 0; tourI = (tourI + 1) % TOUR.length; setView(TOUR[tourI][0]); }
+    }
+    if (turn < 1) { turn = Math.min(1, turn + dt / TURN_SEC); curF = mix(fromF, toF, ease(turn)); }
+  }
+
+  btn.addEventListener('click', function () { playing = !playing; show(); btn.blur(); });
+  names.forEach(function (n) { vBtn[n].addEventListener('click', function () { tour = false; setView(n); show(); vBtn[n].blur(); }); });
+  bTour.addEventListener('click', function () { tour = !tour; tourT = 0; tourI = 0; if (tour) setView('oblique'); show(); bTour.blur(); });
+  shadow.addEventListener('change', function () { show(); shadow.blur(); });
+
+  function tick(now) {
+    if (last !== null) advance(Math.max(0, Math.min(0.1, (now - last) / 1000)));
+    last = now; show(); requestAnimationFrame(tick);
+  }
+  show();
+  if (!printView && !frozen) requestAnimationFrame(tick);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
