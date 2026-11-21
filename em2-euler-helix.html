@@ -101,24 +101,10 @@
   }
 
   var shadowG = el('g', {});
-  var shCos = el('path', { fill: 'none', stroke: '#555', 'stroke-width': 2.6 }, shadowG);
-  var shSin = el('path', { fill: 'none', stroke: ORANGE, 'stroke-width': 2.8, 'stroke-dasharray': '9 5' }, shadowG);
-
-  var dropCos = el('line', { stroke: '#555', 'stroke-width': 1.4, 'stroke-dasharray': '3 3' }, shadowG);
-  var dropSin = el('line', { stroke: ORANGE, 'stroke-width': 1.6, 'stroke-dasharray': '3 3' }, shadowG);
-  var footCos = el('circle', { r: 5.5, fill: '#555', stroke: '#fff', 'stroke-width': 1 }, shadowG);
-  var footSin = el('circle', { r: 5.5, fill: ORANGE, stroke: INK, 'stroke-width': 1 }, shadowG);
-  var shCosText = el('text', { 'font-size': 19, fill: '#333', 'font-family': SANS, 'font-weight': 'bold' }, shadowG); shCosText.textContent = 'cos θ';
-  var shSinText = el('text', { 'font-size': 19, fill: '#9a6a00', 'font-family': SANS, 'font-weight': 'bold' }, shadowG); shSinText.textContent = 'sin θ';
-
-  var legend = el('g', { 'font-family': SANS, 'font-size': 18, fill: INK });
-  el('line', { x1: 150, y1: 22, x2: 196, y2: 22, stroke: BLUE, 'stroke-width': 3.2 }, legend);
-  el('text', { x: 204, y: 28 }, legend).textContent = '나선: 한 점이 지나간 길';
-  var legShadow = el('g', {}, legend);
-  el('line', { x1: 430, y1: 22, x2: 476, y2: 22, stroke: '#555', 'stroke-width': 2.6 }, legShadow);
-  el('text', { x: 484, y: 28 }, legShadow).textContent = 'cos θ: 실수부';
-  el('line', { x1: 640, y1: 22, x2: 686, y2: 22, stroke: ORANGE, 'stroke-width': 2.8, 'stroke-dasharray': '9 5' }, legShadow);
-  el('text', { x: 694, y: 28 }, legShadow).textContent = 'sin θ: 허수부';
+  var shCos = el('path', { fill: 'none', stroke: GREY, 'stroke-width': 1.8 }, shadowG);
+  var shSin = el('path', { fill: 'none', stroke: ORANGE, 'stroke-width': 2, 'stroke-dasharray': '8 5' }, shadowG);
+  var shCosText = el('text', { 'font-size': 19, fill: '#444', 'font-family': SANS }, shadowG); shCosText.textContent = 'cos θ (실수부)';
+  var shSinText = el('text', { 'font-size': 19, fill: INK, 'font-family': SANS }, shadowG); shSinText.textContent = 'sin θ (허수부)';
   var axes = { re: {}, im: {}, th: {} };
   ['re', 'im', 'th'].forEach(function (k) {
     axes[k].line = el('line', { stroke: INK, 'stroke-width': 1.4 });
@@ -234,11 +220,6 @@
     shCosText.setAttribute('opacity', (thLen > 200 && spanCos > 60) ? 1 : 0);
     shSinText.setAttribute('opacity', (thLen > 200 && spanSin > 60) ? 1 : 0);
 
-    var fc = S(f, v.re, 0, theta), fs = S(f, 0, v.im, theta);
-    dropCos.setAttribute('x1', pNow[0].toFixed(1)); dropCos.setAttribute('y1', pNow[1].toFixed(1)); dropCos.setAttribute('x2', fc[0].toFixed(1)); dropCos.setAttribute('y2', fc[1].toFixed(1));
-    dropSin.setAttribute('x1', pNow[0].toFixed(1)); dropSin.setAttribute('y1', pNow[1].toFixed(1)); dropSin.setAttribute('x2', fs[0].toFixed(1)); dropSin.setAttribute('y2', fs[1].toFixed(1));
-    footCos.setAttribute('cx', fc[0].toFixed(1)); footCos.setAttribute('cy', fc[1].toFixed(1));
-    footSin.setAttribute('cx', fs[0].toFixed(1)); footSin.setAttribute('cy', fs[1].toFixed(1));
     arm.setAttribute('x1', base[0].toFixed(1)); arm.setAttribute('y1', base[1].toFixed(1));
     arm.setAttribute('x2', pNow[0].toFixed(1)); arm.setAttribute('y2', pNow[1].toFixed(1));
     armHead.setAttribute('d', head(base, pNow, 12));
@@ -251,7 +232,7 @@
     btn.textContent = playing ? '멈춤' : '재생';
     names.forEach(function (n) { vBtn[n].style.cssText = (n === view ? ON : BTN); });
     bTour.style.cssText = tour ? ON : BTN;
-    shadowG.setAttribute('display', shadow.checked ? 'inline' : 'none'); legShadow.setAttribute('display', shadow.checked ? 'inline' : 'none');
+    shadowG.setAttribute('display', shadow.checked ? 'inline' : 'none');
     cap.innerHTML = CAP[view];
     var v = physics(theta), deg = theta * 180 / Math.PI;
     var sg = function (x) { return (x < 0 ? '−' : '') + Math.abs(x).toFixed(2); };
