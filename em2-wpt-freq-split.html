@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 거리와 봉우리 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 거리와 봉우리</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div class="흰카드" style="text-align:center;padding:10px 18px 12px 18px">
+<div class="캔버스틀"><canvas id="주파수분리" width="2000" height="820" role="img" aria-label="두 코일이 가까워져 결합계수가 커지면 주파수에 따른 수신 전력 곡선의 봉우리가 하나에서 둘로 갈라지는 그림" style="min-width:680px;display:block;width:100%;max-width:1000px;margin:0 auto"></canvas></div>
+<div id="주파수분리-조작" data-prevent-swipe=""></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("주파수분리"), bar = document.getElementById("주파수분리-조작");
+  if (!cv || !cv.getContext || !bar) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", GREY = "#8c8c8c", PALE = "#dcdcdc", INK = "#1c1c1c", DIM = "#555555";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
+  var W = 1000, H = 410, SC = 2;
+  var X0 = 86, X1 = 648, YT = 50, YB = 342;
+  var CXT = 730, CYC = 118, MM = 0.38;
+  var RX = 678;
+  var D_INIT = 100, D_REF = 300;
+
+  var F0 = 15.4e6;
+  var L = 13.2312e-6;
+  var R = 0.5390;
+  var RS = 50, RL = 50;
+  var C = 1 / (Math.pow(2 * Math.PI * F0, 2) * L);
+  var D_MIN = 50, D_MAX = 600, D_STEP = 10;
+  var F_MIN = 12e6, F_MAX = 22e6;
+
+  var K_TAB = [
+    0.46983, 0.40200, 0.34949, 0.30695, 0.27157, 0.24164, 0.21600, 0.19384,
+    0.17454, 0.15763, 0.14274, 0.12957, 0.11789, 0.10749, 0.09821, 0.08989,
+    0.08244, 0.07573, 0.06968, 0.06423, 0.05929, 0.05482, 0.05076, 0.04706,
+    0.04370, 0.04063, 0.03783, 0.03526, 0.03291, 0.03076, 0.02878, 0.02695,
+    0.02527, 0.02373, 0.02230, 0.02097, 0.01975, 0.01862, 0.01756, 0.01659,
+    0.01568, 0.01483, 0.01404, 0.01331, 0.01262, 0.01198, 0.01138, 0.01082,
+    0.01029, 0.00980, 0.00934, 0.00890, 0.00849, 0.00811, 0.00774, 0.00740
+  ];
+
+  function snapD(raw) {
+    var v = Math.round(Number(raw) / D_STEP) * D_STEP;
+    return Math.max(D_MIN, Math.min(D_MAX, v));
+  }
+
+  function kOf(dmm) {
+    var u = (Math.max(D_MIN, Math.min(D_MAX, dmm)) - D_MIN) / D_STEP;
+    var i = Math.min(K_TAB.length - 2, Math.floor(u));
+    return K_TAB[i] + (K_TAB[i + 1] - K_TAB[i]) * (u - i);
+  }
+
+  function ratioAt(k, f) {
+    var w = 2 * Math.PI * f, wM = w * k * L, x = w * L - 1 / (w * C);
+    var a = RS + R, b = R + RL;
+    var re = a * b - x * x + wM * wM, im = x * (a + b);
+    return 4 * RS * RL * wM * wM / (re * re + im * im);
+  }
+  function physics(dmm, f) {
+    var k = kOf(dmm);
+    return { k: k, ratio: ratioAt(k, f) };
+  }
+
+  function peaks(dmm) {
+    var k = kOf(dmm), h = 2000, n = Math.round((F_MAX - F_MIN) / h), out = [];
+    var a = ratioAt(k, F_MIN), b = ratioAt(k, F_MIN + h), c, i, den, f;
+    for (i = 1; i < n; i++) {
+      c = ratioAt(k, F_MIN + (i + 1) * h);
+      if (b > a && b >= c) {
+        den = a - 2 * b + c;
+        f = F_MIN + i * h + (den < 0 ? 0.5 * h * (a - c) / den : 0);
+        out.push({ f: f, ratio: ratioAt(k, f) });
+      }
+      a = b; b = c;
+    }
+    return out;
+  }
+
+  function fmt(x, n) {
+    if (Math.abs(x) < 0.5 * Math.pow(10, -n)) x = 0;
+    return (x < 0 ? "−" : "") + Math.abs(x).toFixed(n);
+  }
+
+  function reading(dmm) {
+    var d = snapD(dmm), k = kOf(d), pk = peaks(d), v0 = ratioAt(k, F0), txt = [], i;
+    for (i = 0; i < pk.length; i++) txt.push(fmt(pk[i].f / 1e6, 2) + " MHz");
+    return {
+      d: d, k: k, peaks: pk, v0: v0, split: pk.length > 1,
+      lo: F0 / Math.sqrt(1 + k), hi: F0 / Math.sqrt(1 - k),
+      kText: fmt(k, 3), peakText: txt,
+      f0Text: fmt(F0 / 1e6, 1) + " MHz", v0Text: fmt(100 * v0, 0) + " %"
+    };
+  }
+
+  var d = D_INIT;
+  function fx(f) { return X0 + (X1 - X0) * (f - F_MIN) / (F_MAX - F_MIN); }
+  function fy(v) { return YB - (YB - YT) * v; }
+  function setFont(kind, size) {
+    if (kind === "i") ctx.font = "italic " + (size + 2) + "px " + SERIF;
+    else if (kind === "s") ctx.font = Math.round(size * 0.74) + "px " + SERIF;
+    else ctx.font = size + "px " + SANS;
+  }
+
+  function runs(x, y, items, size, col, align) {
+    var i, w = 0;
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    if (align === "center" || align === "right") {
+      for (i = 0; i < items.length; i++) { setFont(items[i][1], size); w += ctx.measureText(items[i][0]).width; }
+      x -= (align === "center" ? w / 2 : w);
+    }
+    ctx.fillStyle = col || INK;
+    for (i = 0; i < items.length; i++) {
+      setFont(items[i][1], size);
+      ctx.fillText(items[i][0], x, y + (items[i][1] === "s" ? size * 0.3 : 0));
+      x += ctx.measureText(items[i][0]).width;
+    }
+    return x;
+  }
+  function seg(x0, y0, x1, y1, col, lw, dash) {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function dot(x, y) {
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = ORANGE; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+  }
+  function mark(x, y) {
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 5, y - 9); ctx.lineTo(x + 5, y - 9); ctx.closePath();
+    ctx.fillStyle = DIM; ctx.fill();
+  }
+  function curve(dmm, col, lw, dash) {
+    var n = 2 * (X1 - X0), i, f, x, y;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, YT - 6, X1 - X0, YB - YT + 6); ctx.clip();
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineJoin = "round"; ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    for (i = 0; i <= n; i++) {
+      f = F_MIN + (F_MAX - F_MIN) * i / n; x = fx(f); y = fy(physics(dmm, f).ratio);
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+  function coil(xc) {
+    var i, x;
+    for (i = -2; i <= 2; i++) { x = xc + i * 9 * MM; seg(x, CYC - 150 * MM, x, CYC + 150 * MM, INK, 1.7); }
+  }
+
+  var slider, kval;
+  var SYM = '<i style="font-family:&quot;Times New Roman&quot;,serif;font-size:112%;font-style:italic">';
+
+  function draw() {
+    var r = reading(d), i, f, x, cxr;
+    ctx.setTransform(SC, 0, 0, SC, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+
+    seg(X0, 20, X0 + 36, 20, BLUE, 3.2); runs(X0 + 44, 20, [["지금", "n"]], 17);
+    seg(200, 20, 236, 20, GREY, 2, [7, 5]); runs(244, 20, [["멀 때 (", "n"], ["k", "i"], [" = " + fmt(kOf(D_REF), 3) + ")", "n"]], 17);
+    dot(432, 20); runs(444, 20, [["f", "i"], ["0", "s"], [" 에서의 전력", "n"]], 17);
+
+    for (i = 1; i <= 2; i++) seg(X0, fy(i / 2), X1, fy(i / 2), PALE, 1);
+    seg(X0, YT - 8, X0, YB, INK, 1.3); seg(X0, YB, X1 + 6, YB, INK, 1.3);
+    for (i = 0; i <= 2; i++) { seg(X0 - 5, fy(i / 2), X0, fy(i / 2), INK, 1.3); runs(X0 - 9, fy(i / 2), [[String(50 * i), "n"]], 17, INK, "right"); }
+    for (f = 12; f <= 22; f += 2) { x = fx(f * 1e6); seg(x, YB, x, YB + 5, INK, 1.3); runs(x, YB + 19, [[String(f), "n"]], 17, INK, "center"); }
+    runs((X0 + X1) / 2, YB + 50, [["주파수 [MHz]", "n"]], 17, INK, "center");
+    ctx.save(); ctx.translate(20, (YT + YB) / 2); ctx.rotate(-Math.PI / 2);
+    runs(0, 0, [["수신 전력 / 전원의 최대 전력 [%]", "n"]], 17, INK, "center");
+    ctx.restore();
+
+    x = fx(F0);
+    seg(x, YT - 4, x, YB + 5, GREY, 1.3, [3, 4]);
+    runs(x, YB + 19, [["f", "i"], ["0", "s"]], 17, INK, "center");
+
+    curve(D_REF, GREY, 2, [7, 5]);
+    curve(r.d, BLUE, 3.2);
+    if (r.split) { mark(fx(r.lo), YT - 3); mark(fx(r.hi), YT - 3); }
+    dot(x, fy(r.v0));
+
+    cxr = CXT + r.d * MM;
+    seg(CXT - 36, CYC, 990, CYC, GREY, 1, [10, 4, 2, 4]);
+    coil(CXT); coil(cxr);
+    runs(CXT + 4, CYC - 150 * MM - 15, [["송신", "n"]], 17, INK, "right");
+    runs(cxr - 4, CYC - 150 * MM - 15, [["수신", "n"]], 17, INK);
+
+    runs(RX, 226, [["결합계수 ", "n"], ["k", "i"], [" = " + r.kText, "n"]], 24, BLUE);
+    runs(RX, 268, [[(r.split ? "봉우리 둘: " : "봉우리 하나: ") + r.peakText.join(", "), "n"]], 18);
+    dot(RX + 7, 302);
+    runs(RX + 22, 302, [["f", "i"], ["0", "s"], [" = " + r.f0Text + " 에서의 전력 ", "n"], [r.v0Text, "n"]], 18);
+    if (r.split) {
+      mark(RX + 7, 341);
+      runs(RX + 22, 336, [["f", "i"], ["0", "s"], [" / √(1 ± ", "n"], ["k", "i"], [") 의 위치", "n"]], 17, DIM);
+    }
+
+    if (slider) { slider.value = r.d; kval.innerHTML = SYM + "k</i> = " + r.kText; }
+  }
+
+  bar.style.cssText = "display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:17px;line-height:1.3;color:" + INK + ";font-family:" + SANS;
+  function mk(tag, css) { var e = document.createElement(tag); e.style.cssText = css || ""; bar.appendChild(e); return e; }
+  mk("span").textContent = "두 코일 사이:";
+  mk("span").textContent = "가깝다";
+  slider = mk("input", "width:400px;accent-color:" + BLUE);
+  slider.type = "range"; slider.min = D_MIN; slider.max = D_MAX; slider.step = D_STEP; slider.value = d;
+  slider.setAttribute("aria-label", "두 코일 사이의 거리. 왼쪽이 가깝다");
+  mk("span").textContent = "멀다";
+  kval = mk("span", "min-width:96px;text-align:left;font-variant-numeric:tabular-nums");
+
+  function setD(raw) {
+    if (isFinite(Number(raw))) d = snapD(raw);
+    draw();
+  }
+  slider.addEventListener("input", function () { setD(slider.value); });
+  slider.addEventListener("change", function () { setD(slider.value); slider.blur(); });
+  slider.addEventListener("pointerup", function () { slider.blur(); });
+
+  window.__주파수분리 = {
+    state: function () { var r = reading(d); return { d: r.d, k: r.k, split: r.split, peaks: r.peakText, v0: r.v0Text }; },
+    set: function (v) { setD(v); }
+  };
+  draw();
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
