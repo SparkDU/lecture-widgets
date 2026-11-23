@@ -229,7 +229,7 @@
     runs(RX + 22, 302, [["f", "i"], ["0", "s"], [" = " + r.f0Text + " 에서의 전력 ", "n"], [r.v0Text, "n"]], 18);
     if (r.split) {
       mark(RX + 7, 341);
-      runs(RX + 22, 336, [["f", "i"], ["0", "s"], [" / √(1 ± ", "n"], ["k", "i"], [") 의 위치", "n"]], 17, DIM);
+      runs(RX + 22, 336, [["f", "i"], ["0", "s"], [" / √(1 ± ", "n"], ["k", "i"], ["): 손실이 없을 때의 두 공진 주파수", "n"]], 17, DIM);
     }
 
     if (slider) { slider.value = r.d; kval.innerHTML = SYM + "k</i> = " + r.kText; }
