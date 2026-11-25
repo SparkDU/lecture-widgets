@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>두 코일 둘레의 자기장 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>두 코일 둘레의 자기장</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div class="흰카드" style="text-align:center;padding:10px 18px 12px 18px">
+<div class="캔버스틀"><canvas id="코일자기장" width="2000" height="880" role="img" aria-label="송신 코일과 수신 코일의 축을 지나는 단면에서 자기장 화살표가 한 주기 동안 바뀌는 움직이는 그림" style="min-width:680px;display:block;width:100%;max-width:880px;margin:0 auto"></canvas></div>
+<div id="코일자기장-조작" data-prevent-swipe=""></div>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById("코일자기장"), bar = document.getElementById("코일자기장-조작");
+  if (!cv || !cv.getContext || !bar) return;
+  var ctx = cv.getContext("2d");
+  var BLUE = "#0072B2", ORANGE = "#E69F00", INK = "#1c1c1c", DIM = "#555555", ARROW = "#333333", PALE = "#dcdcdc";
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
+  var W = 1000, H = 440, SC = 2;
+
+  var F0 = 15.4e6, L = 13.2312e-6, R = 0.5390, RS = 50, RL = 50;
+  var C = 1 / (Math.pow(2 * Math.PI * F0, 2) * L);
+  var F_MIN = 12e6, F_MAX = 22e6;
+
+  var A = 0.15, NT = 5, PITCH = 0.009, KEEP = 0.022;
+
+  var ARR = { far: { d: 0.300, k: 0.04063 }, near: { d: 0.100, k: 0.24164 } };
+
+  var ZMIN = -0.21, ZMAX = 0.51, XMAX = 0.24, STEP = 0.03;
+
+  function ellipKE(m) {
+    var a = 1, b = Math.sqrt(1 - m), c = Math.sqrt(m), s = 0.5 * m, p = 1, i, an;
+    for (i = 0; i < 30 && Math.abs(c) > 1e-15; i++) {
+      an = 0.5 * (a + b); c = 0.5 * (a - b); b = Math.sqrt(a * b); a = an;
+      s += p * c * c; p *= 2;
+    }
+    var K = Math.PI / (2 * a);
+    return { K: K, E: K * (1 - s) };
+  }
+
+  function loopH(a, z0, rho, z) {
+    var zt = z - z0, r2 = rho * rho + zt * zt, al2 = a * a + r2 - 2 * a * rho, be2 = a * a + r2 + 2 * a * rho;
+    var be = Math.sqrt(be2), ke = ellipKE(1 - al2 / be2);
+    var hz = ((a * a - r2) * ke.E + al2 * ke.K) / (2 * Math.PI * al2 * be);
+    var hr = rho < 1e-9 ? 0 : zt * ((a * a + r2) * ke.E - al2 * ke.K) / (2 * Math.PI * al2 * be * rho);
+    return { hr: hr, hz: hz };
+  }
+  function turnsZ(zc) { var out = [], i; for (i = 0; i < NT; i++) out.push(zc + (i - (NT - 1) / 2) * PITCH); return out; }
+
+  function coilH(zc, x, z) {
+    var zs = turnsZ(zc), hz = 0, hr = 0, i, h, rho = Math.abs(x);
+    for (i = 0; i < zs.length; i++) { h = loopH(A, zs[i], rho, z); hz += h.hz; hr += h.hr; }
+    return [hz, x < 0 ? -hr : hr];
+  }
+
+  function cmul(p, q) { return [p[0] * q[0] - p[1] * q[1], p[0] * q[1] + p[1] * q[0]]; }
+  function cdiv(p, q) { var d = q[0] * q[0] + q[1] * q[1]; return [(p[0] * q[0] + p[1] * q[1]) / d, (p[1] * q[0] - p[0] * q[1]) / d]; }
+
+  function currents(k, f) {
+    var w = 2 * Math.PI * f, x = w * L - 1 / (w * C), wm = w * k * L;
+    var z1 = [RS + R, x], z2 = [R + RL, x], det = cmul(z1, z2);
+    det = [det[0] + wm * wm, det[1]];
+    return { i1: cdiv(z2, det), i2: cdiv([0, -wm], det) };
+  }
+
+  function ratioAt(k, f) { var i2 = currents(k, f).i2; return 4 * RS * RL * (i2[0] * i2[0] + i2[1] * i2[1]); }
+
+  function peaks(k) {
+    var h = 2000, n = Math.round((F_MAX - F_MIN) / h), out = [], a = ratioAt(k, F_MIN), b = ratioAt(k, F_MIN + h), c, i, den;
+    for (i = 1; i < n; i++) {
+      c = ratioAt(k, F_MIN + (i + 1) * h);
+      if (b > a && b >= c) { den = a - 2 * b + c; out.push(F_MIN + i * h + (den < 0 ? 0.5 * h * (a - c) / den : 0)); }
+      a = b; b = c;
+    }
+    return out;
+  }
+
+  function preset(name) {
+    var arr = name === "far" ? ARR.far : ARR.near, f = F0, pk;
+    if (name === "lo" || name === "hi") { pk = peaks(arr.k); f = name === "lo" ? pk[0] : pk[pk.length - 1]; }
+    var c = currents(arr.k, f);
+    return { name: name, d: arr.d, k: arr.k, f: f, i1: c.i1, i2: c.i2 };
+  }
+
+  function grid(d) {
+    var pts = [], nz = Math.round((ZMAX - ZMIN) / STEP), nx = Math.round(XMAX / STEP), i, j, z, x, near, zs, q;
+    zs = turnsZ(0).concat(turnsZ(d));
+    for (i = 0; i <= nz; i++) for (j = -nx; j <= nx; j++) {
+      z = ZMIN + i * STEP; x = j * STEP; near = false;
+      for (q = 0; q < zs.length; q++) if (Math.hypot(Math.abs(x) - A, z - zs[q]) < KEEP) near = true;
+      if (!near) pts.push({ z: z, x: x, h1: coilH(0, x, z), h2: coilH(d, x, z) });
+    }
+    return pts;
+  }
+
+  function inst(I, deg) { var t = deg * Math.PI / 180; return I[0] * Math.cos(t) - I[1] * Math.sin(t); }
+  function frame(p, pts, deg) {
+    var a = inst(p.i1, deg), b = inst(p.i2, deg);
+    return { i1: a, i2: b, v: pts.map(function (s) { return [a * s.h1[0] + b * s.h2[0], a * s.h1[1] + b * s.h2[1]]; }) };
+  }
+
+  function amp(p, s) {
+    var hz = [p.i1[0] * s.h1[0] + p.i2[0] * s.h2[0], p.i1[1] * s.h1[0] + p.i2[1] * s.h2[0]];
+    var hx = [p.i1[0] * s.h1[1] + p.i2[0] * s.h2[1], p.i1[1] * s.h1[1] + p.i2[1] * s.h2[1]];
+    var P = hz[0] * hz[0] + hx[0] * hx[0], Q = hz[1] * hz[1] + hx[1] * hx[1], S = hz[0] * hz[1] + hx[0] * hx[1];
+    return Math.sqrt(0.5 * (P + Q) + Math.sqrt(0.25 * (P - Q) * (P - Q) + S * S));
+  }
+  function refAmp(p, pts) { var v = pts.map(function (s) { return amp(p, s); }).sort(function (x, y) { return x - y; }); return v[Math.floor(0.9 * (v.length - 1))]; }
+
+  function arrowLen(mag, ref, LMAX) { return LMAX * Math.min(1, Math.sqrt(mag / ref)); }
+
+  function lagDeg(p) {
+    var r = cdiv(p.i2, p.i1), ph = Math.atan2(r[1], r[0]) * 180 / Math.PI;
+    return -ph;
+  }
+  function snapDeg(deg) { var v = Math.round(Number(deg)) % 360; return v < 0 ? v + 360 : v; }
+  function fmt(x, n) { if (Math.abs(x) < 0.5 * Math.pow(10, -n)) x = 0; return (x < 0 ? "−" : "") + Math.abs(x).toFixed(n); }
+  function cabs(p) { return Math.hypot(p[0], p[1]); }
+
+  function reading(p, deg) {
+    var lag = lagDeg(p), ratio = cabs(p.i2) / cabs(p.i1), lagR = Math.round(lag);
+    var how = Math.abs(lagR) <= 20 ? "거의 같은 위상" : Math.abs(lagR) >= 160 ? "거의 반대 위상" : "";
+    return {
+      kText: fmt(p.k, 3), fText: fmt(p.f / 1e6, 2) + " MHz", ratioText: fmt(ratio, 2) + " 배",
+      lag: lagR, lagText: (lagR >= 0 ? fmt(lagR, 0) + "° 늦음" : fmt(-lagR, 0) + "° 빠름") + (how ? " (" + how + ")" : ""),
+      deg: snapDeg(deg), degText: snapDeg(deg) + "°"
+    };
+  }
+
+  var S = 790, PX0 = 30, PYC = 222;
+  function sx(z) { return PX0 + (z - ZMIN) * S; }
+  function sy(x) { return PYC - x * S; }
+  var RX = 636;
+  var NAMES = {
+    far: [["멀리 놓고, ", "b"], ["f", "i"], ["0", "s"], [" 에서", "b"]],
+    lo: [["가까이 놓고, 낮은 주파수 봉우리에서", "b"]],
+    hi: [["가까이 놓고, 높은 주파수 봉우리에서", "b"]]
+  };
+  var cache = {}, cur = "far", phase = 0, playing = true;
+  function prep(name) {
+    if (!cache[name]) { var p = preset(name), pts = grid(p.d); cache[name] = { p: p, pts: pts, ref: refAmp(p, pts) }; }
+    return cache[name];
+  }
+
+  function setFont(kind, size) {
+    if (kind === "i") ctx.font = "italic " + (size + 2) + "px " + SERIF;
+    else if (kind === "s") ctx.font = Math.round(size * 0.74) + "px " + SERIF;
+    else if (kind === "b") ctx.font = "bold " + size + "px " + SANS;
+    else ctx.font = size + "px " + SANS;
+  }
+  function runs(x, y, items, size, col, align) {
+    var i, w = 0;
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    if (align === "center" || align === "right") {
+      for (i = 0; i < items.length; i++) { setFont(items[i][1], size); w += ctx.measureText(items[i][0]).width; }
+      x -= (align === "center" ? w / 2 : w);
+    }
+    ctx.fillStyle = col || INK;
+    for (i = 0; i < items.length; i++) {
+      setFont(items[i][1], size);
+      ctx.fillText(items[i][0], x, y + (items[i][1] === "s" ? size * 0.3 : 0));
+      x += ctx.measureText(items[i][0]).width;
+    }
+    return x;
+  }
+  function seg(x0, y0, x1, y1, col, lw, dash) {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function arrow(x, y, dx, dy, len) {
+    if (len < 1.2) { ctx.beginPath(); ctx.arc(x, y, 1, 0, 2 * Math.PI); ctx.fillStyle = PALE; ctx.fill(); return; }
+    var n = Math.hypot(dx, dy), ux = dx / n, uy = dy / n, x0 = x - 0.5 * len * ux, y0 = y - 0.5 * len * uy, x1 = x + 0.5 * len * ux, y1 = y + 0.5 * len * uy;
+    var hd = Math.min(6, 0.45 * len);
+    seg(x0, y0, x1 - 0.6 * hd * ux, y1 - 0.6 * hd * uy, ARROW, 1.5);
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - hd * ux - 0.5 * hd * uy, y1 - hd * uy + 0.5 * hd * ux);
+    ctx.lineTo(x1 - hd * ux + 0.5 * hd * uy, y1 - hd * uy - 0.5 * hd * ux);
+    ctx.closePath(); ctx.fillStyle = ARROW; ctx.fill();
+  }
+
+  function wire(x, y, i, imax, col) {
+    var r = 3 + 5 * Math.min(1, Math.abs(i) / imax);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = "#ffffff"; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.stroke();
+    if (Math.abs(i) < 0.02 * imax) return;
+    if (i > 0) { ctx.beginPath(); ctx.arc(x, y, Math.max(1.4, 0.32 * r), 0, 2 * Math.PI); ctx.fillStyle = col; ctx.fill(); }
+    else { var q = 0.6 * r; seg(x - q, y - q, x + q, y + q, col, 1.6); seg(x - q, y + q, x + q, y - q, col, 1.6); }
+  }
+  function tag(x, y, txt, col, align) {
+    setFont("b", 17); var w = ctx.measureText(txt).width, x0 = align === "right" ? x - w : x;
+    ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillRect(x0 - 5, y - 13, w + 10, 26);
+    runs(x0, y, [[txt, "b"]], 17, col);
+  }
+  function draw() {
+    var P = prep(cur), p = P.p, deg = snapDeg(phase), fr = frame(p, P.pts, deg), rd = reading(p, deg), i, s, v, m, imax, zs, j, cx, cy, t;
+    ctx.setTransform(SC, 0, 0, SC, 0, 0);
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+
+    for (i = 0; i < P.pts.length; i++) {
+      s = P.pts[i]; v = fr.v[i]; m = Math.hypot(v[0], v[1]);
+      arrow(sx(s.z), sy(s.x), v[0], -v[1], arrowLen(m, P.ref, 20));
+    }
+
+    imax = Math.max(cabs(p.i1), cabs(p.i2));
+    zs = [[0, fr.i1, BLUE], [p.d, fr.i2, ORANGE]];
+    for (j = 0; j < 2; j++) {
+      turnsZ(zs[j][0]).forEach(function (z) {
+        wire(sx(z), sy(A), zs[j][1], imax, zs[j][2]);
+        wire(sx(z), sy(-A), -zs[j][1], imax, zs[j][2]);
+      });
+    }
+
+    tag(sx(turnsZ(0)[NT - 1]) + 4, sy(A) - 26, "송신 코일", BLUE, "right");
+    tag(sx(turnsZ(p.d)[0]) - 4, sy(A) - 26, "수신 코일", "#9A6A00", "left");
+
+    seg(RX - 14, 24, RX - 14, H - 24, PALE, 1);
+    runs(RX, 38, NAMES[cur], 19, INK);
+    runs(RX, 80, [["결합계수 ", "n"], ["k", "i"], [" = " + rd.kText, "n"]], 18, BLUE);
+    runs(RX, 112, [["주파수 ", "n"], ["f", "i"], [" = " + rd.fText, "n"]], 18);
+    runs(RX, 152, [["수신 전류의 진폭 = 송신 전류의 " + rd.ratioText, "n"]], 17);
+    runs(RX, 182, [["수신 전류의 위상: " + rd.lagText, "n"]], 17);
+
+    cx = RX + 60; cy = 282;
+    ctx.beginPath(); ctx.arc(cx, cy, 44, 0, 2 * Math.PI); ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.stroke();
+    seg(cx, cy, cx + 50, cy, PALE, 1);
+    t = deg * Math.PI / 180;
+    seg(cx, cy, cx + 40 * Math.cos(t), cy - 40 * Math.sin(t), INK, 2.6);
+    ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, 2 * Math.PI); ctx.fillStyle = INK; ctx.fill();
+    runs(cx + 64, cy - 10, [["ω", "i"], ["t", "i"], [" = " + rd.degText, "n"]], 20);
+    runs(cx + 64, cy + 18, [["(한 주기의 어느 순간인가)", "n"]], 14, DIM);
+
+    wire(RX + 8, 366, 1, 1, INK); runs(RX + 22, 366, [["화면에서 나오는 전류", "n"]], 15, DIM);
+    wire(RX + 8, 394, -1, 1, INK); runs(RX + 22, 394, [["화면으로 들어가는 전류", "n"]], 15, DIM);
+    runs(RX + 196, 380, [["기호가 클수록 큰 전류", "n"]], 14, DIM);
+  }
+
+  bar.style.cssText = "display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:16px;line-height:1.3;color:" + INK + ";font-family:" + SANS;
+  var BTN = "border:1px solid #888;border-radius:6px;padding:4px 12px;background:#fff;cursor:pointer;font:inherit;color:" + INK;
+  var btns = {}, playBtn;
+  function mk(tag, css, txt) { var e = document.createElement(tag); e.style.cssText = css || ""; if (txt) e.textContent = txt; bar.appendChild(e); return e; }
+  function choose(name) {
+    if (!NAMES[name]) return;
+    cur = name; phase = 0;
+    Object.keys(btns).forEach(function (n) { btns[n].style.background = n === cur ? "#e8f1f8" : "#fff"; btns[n].style.fontWeight = n === cur ? "700" : "400"; });
+    draw();
+  }
+  [["far", "멀리 · 공진 주파수"], ["lo", "가까이 · 낮은 주파수 봉우리"], ["hi", "가까이 · 높은 주파수 봉우리"]].forEach(function (b) {
+    var e = mk("button", BTN, b[1]); e.type = "button";
+    e.addEventListener("click", function () { choose(b[0]); e.blur(); });
+    btns[b[0]] = e;
+  });
+  playBtn = mk("button", BTN + ";min-width:72px", "멈춤"); playBtn.type = "button";
+  playBtn.addEventListener("click", function () { playing = !playing; playBtn.textContent = playing ? "멈춤" : "재생"; playBtn.blur(); });
+
+  var PERIOD = 4, last = null, PRINT = /view=print/.test(String((window.location && window.location.search) || ""));
+  function visible() {
+    var R_ = window.Reveal;
+    if (R_ && R_.getCurrentSlide) { var c = R_.getCurrentSlide(); return !!(c && c.contains(cv)); }
+    return true;
+  }
+  function step(dt) { if (playing) { phase = (phase + 360 * dt / PERIOD) % 360; draw(); } }
+  function loop(ts) {
+    if (last !== null && visible()) step(Math.min(0.1, (ts - last) / 1000));
+    last = ts;
+    window.requestAnimationFrame(loop);
+  }
+
+  window.__코일자기장 = {
+    state: function () { var P = prep(cur), r = reading(P.p, phase); return { preset: cur, deg: r.deg, playing: playing, f: P.p.f, k: P.p.k, kText: r.kText, fText: r.fText, ratioText: r.ratioText, lagText: r.lagText }; },
+    choose: choose, step: step, setDeg: function (v) { if (isFinite(Number(v))) { phase = snapDeg(v); draw(); } }, click: function (n) { if (n === "play") playBtn.click(); else btns[n].click(); }
+  };
+  choose("far");
+  if (!PRINT && window.requestAnimationFrame) window.requestAnimationFrame(loop);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
