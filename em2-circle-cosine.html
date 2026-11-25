@@ -45,7 +45,7 @@
 <main>
 <div style="text-align:center">
 <div style="overflow-x:auto">
-<svg id="원과코사인" data-widget viewBox="0 0 960 330" role="img" aria-label="반지름 1 인 원 위에서 벡터가 돌고, 그 세로 성분 y 를 각에 따라 옮겨 그리면 코사인 곡선이 되는 그림" style="display:block;width:100%;max-width:1000px;min-width:680px;margin:0 auto"></svg>
+<svg id="원과코사인" data-widget viewBox="0 0 960 318" role="img" aria-label="반지름 1 인 원 위에서 벡터가 돌고, 그 세로 성분 y 를 각에 따라 옮겨 그리면 코사인 곡선이 되는 그림" style="display:block;width:100%;max-width:1000px;min-width:680px;margin:0 auto"></svg>
 </div>
 <div id="원과코사인-조작"></div>
 </div>
@@ -75,7 +75,7 @@
   var SERIF = '"Times New Roman", "Nimbus Roman", serif';
   var SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
 
-  var CX = 160, CY = 160, R = 108, X0 = 380, GW = 500;
+  var CX = 160, CY = 150, R = 108, X0 = 380, GW = 500;
   function gx(deg) { return X0 + GW * deg / 360; }
   function gy(v) { return CY - R * v; }
 
@@ -129,7 +129,7 @@
     line([gx(d), gy(1)], [gx(d), gy(-1) + 6], dots);
     runs(gx(d), gy(-1) + 30, [[d + '°', 'n']], { 'text-anchor': 'middle', 'font-size': 16 });
   });
-  runs(CX, CY + R + 52, [['y', 'i'], [' = ', 'r'], ['cos ', 'r'], ['ω', 'i'], ['t', 'i']], { 'text-anchor': 'middle', fill: OTXT, 'font-size': 22 });
+  runs(CX, CY + R + 52, [['y', 'i'], [' = ', 'r'], ['cos(', 'r'], ['ω', 'i'], ['t', 'i'], [')', 'r']], { 'text-anchor': 'middle', fill: OTXT, 'font-size': 22 });
 
   var trace = el('path', { fill: 'none', stroke: ORANGE, 'stroke-width': 3 });
   var link = el('line', { stroke: GREY, 'stroke-width': 1.2, 'stroke-dasharray': '5 5' });
