@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>두 코일 둘레의 자기장 · 전자기학 2</title>
+<title>두 코일 주변의 자기장 · 전자기학 2</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -38,13 +38,13 @@
 </head>
 <body>
 <header>
-<h1>두 코일 둘레의 자기장</h1>
+<h1>두 코일 주변의 자기장</h1>
 <div class="과목">전자기학 2</div>
 </header>
 <p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
 <main>
 <div class="흰카드" style="text-align:center;padding:10px 18px 12px 18px">
-<div class="캔버스틀"><canvas id="코일자기장" width="2000" height="880" role="img" aria-label="송신 코일과 수신 코일의 축을 지나는 단면에서 자기장 화살표가 한 주기 동안 바뀌는 움직이는 그림" style="min-width:680px;display:block;width:100%;max-width:880px;margin:0 auto"></canvas></div>
+<div class="캔버스틀"><canvas id="코일자기장" width="2000" height="880" role="img" aria-label="송신 코일과 수신 코일 주변, 두 코일의 축을 지나는 단면에서 자기장 화살표가 한 주기 동안 바뀌는 움직이는 그림" style="min-width:680px;display:block;width:100%;max-width:880px;margin:0 auto"></canvas></div>
 <div id="코일자기장-조작" data-prevent-swipe=""></div>
 </div>
 
@@ -171,9 +171,9 @@
   function sy(x) { return PYC - x * S; }
   var RX = 636;
   var NAMES = {
-    far: [["멀리 놓고, ", "b"], ["f", "i"], ["0", "s"], [" 에서", "b"]],
-    lo: [["가까이 놓고, 낮은 주파수 봉우리에서", "b"]],
-    hi: [["가까이 놓고, 높은 주파수 봉우리에서", "b"]]
+    far: [["두 코일을 멀리 놓고, ", "b"], ["f", "i"], ["0", "s"], [" 에서", "b"]],
+    lo: [["두 코일을 가까이, 낮은 주파수 봉우리", "b"]],
+    hi: [["두 코일을 가까이, 높은 주파수 봉우리", "b"]]
   };
   var cache = {}, cur = "far", phase = 0, playing = true;
   function prep(name) {
@@ -256,8 +256,9 @@
     runs(RX, 38, NAMES[cur], 19, INK);
     runs(RX, 80, [["결합계수 ", "n"], ["k", "i"], [" = " + rd.kText, "n"]], 18, BLUE);
     runs(RX, 112, [["주파수 ", "n"], ["f", "i"], [" = " + rd.fText, "n"]], 18);
-    runs(RX, 152, [["수신 전류의 진폭 = 송신 전류의 " + rd.ratioText, "n"]], 17);
-    runs(RX, 182, [["수신 전류의 위상: " + rd.lagText, "n"]], 17);
+    runs(RX, 146, [["송신 전류와 비교한 수신 전류", "n"]], 15, DIM);
+    runs(RX, 172, [["진폭: " + rd.ratioText, "n"]], 17);
+    runs(RX, 198, [["위상: " + rd.lagText, "n"]], 17);
 
     cx = RX + 60; cy = 282;
     ctx.beginPath(); ctx.arc(cx, cy, 44, 0, 2 * Math.PI); ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.stroke();
@@ -266,11 +267,11 @@
     seg(cx, cy, cx + 40 * Math.cos(t), cy - 40 * Math.sin(t), INK, 2.6);
     ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, 2 * Math.PI); ctx.fillStyle = INK; ctx.fill();
     runs(cx + 64, cy - 10, [["ω", "i"], ["t", "i"], [" = " + rd.degText, "n"]], 20);
-    runs(cx + 64, cy + 18, [["(한 주기의 어느 순간인가)", "n"]], 14, DIM);
+    runs(cx + 64, cy + 18, [["(한 주기 가운데 지금 순간)", "n"]], 14, DIM);
 
     wire(RX + 8, 366, 1, 1, INK); runs(RX + 22, 366, [["화면에서 나오는 전류", "n"]], 15, DIM);
     wire(RX + 8, 394, -1, 1, INK); runs(RX + 22, 394, [["화면으로 들어가는 전류", "n"]], 15, DIM);
-    runs(RX + 196, 380, [["기호가 클수록 큰 전류", "n"]], 14, DIM);
+    runs(RX + 196, 380, [["기호가 클수록 전류가 큼", "n"]], 14, DIM);
   }
 
   bar.style.cssText = "display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:16px;line-height:1.3;color:" + INK + ";font-family:" + SANS;
