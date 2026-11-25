@@ -159,6 +159,14 @@
   var gArrows = el('g', {});
   var N = 32, arrows = [], heads = el('path', { fill: BLUE }, gArrows);
   for (var i = 0; i <= N; i++) arrows.push(el('line', { stroke: BLUE, 'stroke-width': 1.5 }, gArrows));
+
+  var gFront = el('g', {});
+  var fGuideX = el('line', { stroke: GREY, 'stroke-width': 1, 'stroke-dasharray': '3 3' }, gFront);
+  var fGuideY = el('line', { stroke: GREY, 'stroke-width': 1, 'stroke-dasharray': '3 3' }, gFront);
+  var fArrX = el('line', { stroke: GREY, 'stroke-width': 3.2 }, gFront), fHeadX = el('path', { fill: GREY }, gFront);
+  var fArrY = el('line', { stroke: ORANGE, 'stroke-width': 3.2, 'stroke-dasharray': '8 5' }, gFront), fHeadY = el('path', { fill: ORANGE }, gFront);
+  var fTextX = text(0, 0, '수평 편파 E_{x}', { 'text-anchor': 'middle' }, gFront);
+  var fTextY = text(0, 0, '수직 편파 E_{y}', { 'text-anchor': 'end' }, gFront);
   var mark = el('line', { stroke: ORANGE, 'stroke-width': 4.5, 'stroke-linecap': 'round' });
   var markHead = el('path', { fill: ORANGE, stroke: INK, 'stroke-width': 0.8 });
 
@@ -189,7 +197,7 @@
   var q = new URLSearchParams(location.search);
   var CAP = {
     oblique: '비스듬히 보면: 한 순간에 파란 화살표의 끝을 이으면 나사선',
-    front: '앞에서 보면 (다가오는 파를 마주 봄): 전기장 화살표의 끝이 원을 그림',
+    front: '앞에서 보면: 수평 편파(' + EX + ')와 수직 편파(' + EY + ')를 더한 전기장의 끝이 원을 그림',
     side: '옆에서 보면 (+' + sym('y') + ' 쪽에서 봄): ' + EX + ' 성분의 곡선만 보임',
     top: '밑에서 보면 (−' + sym('x') + ' 쪽에서 봄): ' + EY + ' 성분의 곡선만 보임'
   };
@@ -269,12 +277,21 @@
     f = physics(Z0, t, opt);
     var b0 = P(0, 0, Z0), t0 = P(f.Ex, f.Ey, Z0);
     setLine(mark, b0, t0); markHead.setAttribute('d', head(b0, t0, 14));
+
+    var tx = P(f.Ex, 0, Z0), ty = P(0, f.Ey, Z0);
+    setLine(fArrX, b0, tx); fHeadX.setAttribute('d', head(b0, tx, 13));
+    setLine(fArrY, b0, ty); fHeadY.setAttribute('d', head(b0, ty, 13));
+    setLine(fGuideX, tx, t0); setLine(fGuideY, ty, t0);
+    a = P(0.62, 0, Z0); fTextX.setAttribute('x', a[0].toFixed(1)); fTextX.setAttribute('y', (a[1] + 30).toFixed(1));
+    a = P(0, 0.62, Z0); fTextY.setAttribute('x', (a[0] - 14).toFixed(1)); fTextY.setAttribute('y', (a[1] + 6).toFixed(1));
+    gFront.setAttribute('opacity', (1 - along).toFixed(2));
   }
 
   function show() {
     draw();
     btn.textContent = playing ? '멈춤' : '재생';
     gComp.setAttribute('display', comp.checked ? 'inline' : 'none');
+    gFront.setAttribute('display', comp.checked ? 'inline' : 'none');
     names.forEach(function (n) { vBtn[n].style.cssText = (n === view ? ON : BTN); });
     cap.innerHTML = CAP[view];
   }
