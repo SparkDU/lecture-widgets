@@ -45,7 +45,7 @@
 <main>
 <div style="text-align:center">
 <div style="overflow-x:auto">
-<svg id="원과코사인" data-widget viewBox="0 0 960 318" role="img" aria-label="반지름 1 인 원 위에서 벡터가 돌고, 그 세로 성분 y 를 각에 따라 옮겨 그리면 코사인 곡선이 되는 그림" style="display:block;width:100%;max-width:1000px;min-width:680px;margin:0 auto"></svg>
+<svg id="원과코사인" data-widget viewBox="0 0 960 318" role="img" aria-label="반지름 1 인 원 위에서 벡터가 돌고, 그 세로 성분 y 를 각에 따라 옮겨 그리면 코사인 곡선이 되는 그림" style="display:block;width:100%;max-width:840px;min-width:680px;margin:0 auto"></svg>
 </div>
 <div id="원과코사인-조작"></div>
 </div>
@@ -117,6 +117,8 @@
   el('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: '#999999', 'stroke-width': 1.4 });
   line([CX - R - 22, CY], [CX + R + 22, CY], thin);
   line([CX, CY + R + 22], [CX, CY - R - 22], thin);
+  runs(CX + 8, CY - R - 10, [['Re', 'r']], { fill: GREY, 'font-size': 15 });
+  runs(CX + R + 14, CY - 8, [['Im', 'r']], { fill: GREY, 'font-size': 15 });
   line([X0, CY + R + 14], [X0, CY - R - 26], axis); el('path', { d: head([X0, CY], [X0, CY - R - 26], 11), fill: INK });
   runs(X0 + 10, CY - R - 16, [['y', 'i']], { fill: OTXT, 'font-weight': 700 });
   line([X0, CY], [X0 + GW + 30, CY], axis); el('path', { d: head([X0, CY], [X0 + GW + 30, CY], 11), fill: INK });
