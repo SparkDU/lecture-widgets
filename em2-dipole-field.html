@@ -155,16 +155,17 @@
     var RX = 812;
     runs(RX, 36, [['ω', 'i'], ['t', 'i'], [' = ' + d + '°', 'n']], 20);
     runs(RX, 76, [['안테나 전류', 'n']], 15, DIM);
-    runs(RX, 98, [['(검은 화살표)', 'n']], 15, DIM);
+    runs(RX, 98, [['(막대 옆 검은 화살표)', 'n']], 15, DIM);
     runs(RX, 150, [['주황 점의', 'b']], 16, OTXT);
     runs(RX, 172, [['전기장', 'b']], 16, OTXT);
     var zv = pez / Math.hypot(probeF.ez[0], probeF.ez[1]);
     if (Math.abs(zv) < 0.005) zv = 0;
-    runs(RX, 200, [['세로 성분 ÷ 최댓값', 'n']], 14, DIM);
-    runs(RX, 222, [['= ' + (zv < 0 ? '−' : '') + Math.abs(zv).toFixed(2), 'n']], 17);
+    runs(RX, 196, [['세로 성분 ÷', 'n']], 14, DIM);
+    runs(RX, 214, [['이 점의 최댓값', 'n']], 14, DIM);
+    runs(RX, 238, [['= ' + (zv < 0 ? '−' : '') + Math.abs(zv).toFixed(2), 'n']], 17);
     var ratio = Math.hypot(probeF.ez[0], probeF.ez[1]) / Math.hypot(probeF.hy[0], probeF.hy[1]) * 376.73;
-    runs(RX, 270, [['주황 점의 ', 'n'], ['E', 'i'], ['/', 'n'], ['H', 'i']], 15, DIM);
-    runs(RX, 292, [['= ' + ratio.toFixed(0) + ' Ω', 'n']], 17);
+    runs(RX, 282, [['주황 점의 ', 'n'], ['E', 'i'], ['/', 'n'], ['H', 'i']], 15, DIM);
+    runs(RX, 304, [['= ' + ratio.toFixed(0) + ' Ω', 'n']], 17);
     if (showH) {
       hmark(RX + 8, 352, 1, 1); runs(RX + 22, 352, [['자기장: 화면에서 나옴', 'n']], 13, DIM);
       hmark(RX + 8, 376, -1, 1); runs(RX + 22, 376, [['자기장: 화면으로 들어감', 'n']], 13, DIM);
