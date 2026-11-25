@@ -44,7 +44,7 @@
 <p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
 <main>
 <div style="text-align:center">
-<div class="캔버스틀"><canvas id="다이폴전기장" width="2000" height="900" role="img" aria-label="짧은 안테나 둘레의 단면에서 전기장 화살표가 위상에 따라 바뀌며 바깥으로 퍼져 나가는 움직이는 그림" style="min-width:680px;display:block;width:100%;max-width:800px;margin:0 auto"></canvas></div>
+<div class="캔버스틀"><canvas id="다이폴전기장" width="2400" height="900" role="img" aria-label="짧은 안테나 둘레의 단면에서 전기장 화살표가 위상에 따라 바뀌며 바깥으로 퍼져 나가는 움직이는 그림과, 옆에 안테나 전류의 코사인 파형" style="min-width:680px;display:block;width:100%;max-width:960px;margin:0 auto"></canvas></div>
 <div id="다이폴전기장-조작" data-prevent-swipe=""></div>
 </div>
 
@@ -79,7 +79,7 @@
 
   var BLUE = '#0072B2', ORANGE = '#E69F00', OTXT = '#9A6A00', INK = '#1c1c1c', DIM = '#555555', PALE = '#d4d4d4';
   var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
-  var W = 1000, H = 450, SC = 2;
+  var W = 1200, H = 450, SC = 2;
 
   var S = 190, PX0 = 400, PY0 = 225, XM = 2, ZM = 1.1, STEP = 0.125, RMIN = 0.15;
   var PROBE = { x: 1.5, z: 0 };
@@ -152,23 +152,38 @@
     ctx.beginPath(); ctx.arc(sx(PROBE.x), sy(PROBE.z), 13, 0, 2 * Math.PI); ctx.strokeStyle = ORANGE; ctx.lineWidth = 2.5; ctx.stroke();
     arrow(sx(PROBE.x), sy(PROBE.z), pex, -pez, 46 * Math.min(1, pm / Math.hypot(probeF.ez[0], probeF.ez[1])), ORANGE, 4);
 
-    var RX = 812;
-    runs(RX, 36, [['ω', 'i'], ['t', 'i'], [' = ' + d + '°', 'n']], 20);
-    runs(RX, 76, [['안테나 전류', 'n']], 15, DIM);
-    runs(RX, 98, [['(막대 옆 검은 화살표)', 'n']], 15, DIM);
-    runs(RX, 150, [['주황 점의', 'b']], 16, OTXT);
-    runs(RX, 172, [['전기장', 'b']], 16, OTXT);
+    var RX = 820, GX0 = 846, GW = 320, GY = 92, GA = 38, tk, gxk;
+    var nx = runs(RX, 26, [['안테나 전류  ', 'b'], ['I', 'i'], [' = ', 'n'], ['I', 'i']], 16);
+    ctx.font = 'italic 12px ' + SERIF; ctx.fillText('0', nx, 31); nx += ctx.measureText('0').width + 2;
+    runs(nx, 26, [[' cos(', 'n'], ['ω', 'i'], ['t', 'i'], [')', 'n']], 16);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(GX0, GY - GA - 10); ctx.lineTo(GX0, GY + GA + 6); ctx.moveTo(GX0, GY); ctx.lineTo(GX0 + GW + 14, GY); ctx.stroke();
+    runs(GX0 + GW + 18, GY, [['ω', 'i'], ['t', 'i']], 14);
+    runs(GX0 - 14, GY - GA, [['I', 'i']], 13, DIM);
+    ctx.setLineDash([2, 4]); ctx.strokeStyle = PALE;
+    for (tk = 90; tk <= 360; tk += 90) { gxk = GX0 + GW * tk / 360; ctx.beginPath(); ctx.moveTo(gxk, GY - GA); ctx.lineTo(gxk, GY + GA); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(GX0, GY - GA); ctx.lineTo(GX0 + GW, GY - GA); ctx.moveTo(GX0, GY + GA); ctx.lineTo(GX0 + GW, GY + GA); ctx.stroke();
+    ctx.setLineDash([]);
+    for (tk = 90; tk <= 360; tk += 90) { ctx.font = '12px ' + SANS; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.fillText(tk + '°', GX0 + GW * tk / 360, GY + GA + 14); }
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath();
+    for (tk = 0; tk <= 360; tk += 3) { gxk = GX0 + GW * tk / 360; var gyk = GY - GA * Math.cos(tk * Math.PI / 180); if (tk) ctx.lineTo(gxk, gyk); else ctx.moveTo(gxk, gyk); }
+    ctx.stroke();
+    var dx = GX0 + GW * d / 360, dy = GY - GA * I;
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = DIM; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dx, GY); ctx.lineTo(dx, dy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(dx, dy, 5, 0, 2 * Math.PI); ctx.fillStyle = INK; ctx.fill();
+    runs(RX, 168, [['막대 옆 검은 화살표 = 지금 이 순간의 전류', 'n']], 13, DIM);
+    runs(RX, 200, [['ω', 'i'], ['t', 'i'], [' = ' + d + '°', 'n']], 20);
+
+    runs(RX, 244, [['주황 점의 전기장', 'b']], 16, OTXT);
     var zv = pez / Math.hypot(probeF.ez[0], probeF.ez[1]);
     if (Math.abs(zv) < 0.005) zv = 0;
-    runs(RX, 196, [['세로 성분 ÷', 'n']], 14, DIM);
-    runs(RX, 214, [['이 점의 최댓값', 'n']], 14, DIM);
-    runs(RX, 238, [['= ' + (zv < 0 ? '−' : '') + Math.abs(zv).toFixed(2), 'n']], 17);
+    runs(RX, 270, [['세로 성분 ÷ 이 점의 최댓값 = ' + (zv < 0 ? '−' : '') + Math.abs(zv).toFixed(2), 'n']], 14, INK);
     var ratio = Math.hypot(probeF.ez[0], probeF.ez[1]) / Math.hypot(probeF.hy[0], probeF.hy[1]) * 376.73;
-    runs(RX, 282, [['주황 점의 ', 'n'], ['E', 'i'], ['/', 'n'], ['H', 'i']], 15, DIM);
-    runs(RX, 304, [['= ' + ratio.toFixed(0) + ' Ω', 'n']], 17);
+    runs(RX, 296, [['주황 점의 ', 'n'], ['E', 'i'], ['/', 'n'], ['H', 'i'], [' = ' + ratio.toFixed(0) + ' Ω', 'n']], 14, INK);
     if (showH) {
-      hmark(RX + 8, 352, 1, 1); runs(RX + 22, 352, [['자기장: 화면에서 나옴', 'n']], 13, DIM);
-      hmark(RX + 8, 376, -1, 1); runs(RX + 22, 376, [['자기장: 화면으로 들어감', 'n']], 13, DIM);
+      hmark(RX + 8, 346, 1, 1); runs(RX + 22, 346, [['자기장: 화면에서 나옴', 'n']], 13, DIM);
+      hmark(RX + 8, 370, -1, 1); runs(RX + 22, 370, [['자기장: 화면으로 들어감', 'n']], 13, DIM);
     }
   }
 
