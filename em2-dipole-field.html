@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>눌러 보기: 안테나 둘레의 전기장 · 전자기학 2</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.1rem 0.9rem 2rem;
+    background: #ffffff; color: #333333;
+    font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { max-width: 720px; margin: 0 auto 0.9rem; }
+  h1 { font-size: 1.12rem; line-height: 1.4; margin: 0 0 0.15rem; color: #0b3050; }
+  .과목 { font-size: 0.8rem; color: #8a8a8a; }
+  main { max-width: 720px; margin: 0 auto; }
+  canvas { display: block; margin: 0 auto; touch-action: none; }
+  /* 🔴 가로로 긴 위젯은 폰 폭(375px)에 넣으면 6배 축소돼 글자가 안 읽힌다
+     (실측 2026-09-05, 모바일 에뮬레이션). ⇒ 최소 폭을 두고 좌우로 밀게 한다.
+     위젯의 클릭 좌표는 getBoundingClientRect() 로 계산하므로 스크롤과 무관하다. */
+  .캔버스틀 { overflow-x: auto; -webkit-overflow-scrolling: touch;
+              margin: 0 -0.9rem; padding: 0 0.9rem; }
+  .안내 { max-width: 720px; margin: 0 auto 0.7rem; font-size: 0.78rem;
+          color: #8a6d3b; background: #fdf7e7; border-left: 3px solid #E69F00;
+          padding: 0.45rem 0.7rem; border-radius: 3px; }
+  @media (min-width: 760px) { .안내 { display: none; } }
+  footer {
+    max-width: 720px; margin: 2rem auto 0; padding-top: 0.8rem;
+    border-top: 1px solid #e5e5e5;
+    font-size: 0.72rem; color: #9a9a9a; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<header>
+<h1>눌러 보기: 안테나 둘레의 전기장</h1>
+<div class="과목">전자기학 2</div>
+</header>
+<p class="안내">폰이라면 <b>가로로 돌리거나</b> 그림을 <b>좌우로 밀어</b> 보세요. 손가락으로 벌리면 확대됩니다.</p>
+<main>
+<div style="text-align:center">
+<div class="캔버스틀"><canvas id="다이폴전기장" width="2000" height="900" role="img" aria-label="짧은 안테나 둘레의 단면에서 전기장 화살표가 위상에 따라 바뀌며 바깥으로 퍼져 나가는 움직이는 그림" style="min-width:680px;display:block;width:100%;max-width:800px;margin:0 auto"></canvas></div>
+<div id="다이폴전기장-조작" data-prevent-swipe=""></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var cv = document.getElementById('다이폴전기장'), bar = document.getElementById('다이폴전기장-조작');
+  if (!cv || !cv.getContext || !bar) return;
+  var ctx = cv.getContext('2d');
+
+  var K = 2 * Math.PI;
+  function cmul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+  function physics(x, z) {
+    var r = Math.hypot(x, z), th = Math.atan2(x, z), s = Math.sin(th), c = Math.cos(th), u = K * r;
+    var ph = [Math.cos(u), -Math.sin(u)];
+    var a1 = 1 / u, a2 = 1 / (u * u), a3 = 1 / (u * u * u);
+    var hp = cmul(ph, [a2, a1]);
+    var et = cmul(ph, [a2, a1 - a3]);
+    var er = cmul(ph, [a2, -a3]);
+    var Hphi = [s * hp[0], s * hp[1]], Eth = [s * et[0], s * et[1]], Er = [2 * c * er[0], 2 * c * er[1]];
+
+    return {
+      ex: [Er[0] * s + Eth[0] * c, Er[1] * s + Eth[1] * c],
+      ez: [Er[0] * c - Eth[0] * s, Er[1] * c - Eth[1] * s],
+      hy: Hphi
+    };
+  }
+
+  function inst(A, deg) { var t = deg * Math.PI / 180; return A[0] * Math.cos(t) - A[1] * Math.sin(t); }
+  function snap(deg) { var v = Math.round(Number(deg)) % 360; return v < 0 ? v + 360 : v; }
+  function step(deg, dt, speed) { var v = deg + Math.max(0, Math.min(0.1, dt)) * speed; return v - 360 * Math.floor(v / 360); }
+
+  var BLUE = '#0072B2', ORANGE = '#E69F00', OTXT = '#9A6A00', INK = '#1c1c1c', DIM = '#555555', PALE = '#d4d4d4';
+  var SERIF = '"Times New Roman", "Nimbus Roman", serif', SANS = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif';
+  var W = 1000, H = 450, SC = 2;
+
+  var S = 190, PX0 = 400, PY0 = 225, XM = 2, ZM = 1.1, STEP = 0.125, RMIN = 0.15;
+  var PROBE = { x: 1.5, z: 0 };
+  function sx(x) { return PX0 + S * x; }
+  function sy(z) { return PY0 - S * z; }
+
+  var pts = [], i, j, x, z;
+  for (i = -Math.round(ZM / STEP); i <= Math.round(ZM / STEP); i++) for (j = -Math.round(XM / STEP); j <= Math.round(XM / STEP); j++) {
+    x = j * STEP; z = i * STEP;
+    if (Math.hypot(x, z) < RMIN) continue;
+    pts.push({ x: x, z: z, f: physics(x, z) });
+  }
+  function ampE(f) {
+    var P = f.ex[0] * f.ex[0] + f.ez[0] * f.ez[0], Q = f.ex[1] * f.ex[1] + f.ez[1] * f.ez[1], R = f.ex[0] * f.ex[1] + f.ez[0] * f.ez[1];
+    return Math.sqrt(0.5 * (P + Q) + Math.sqrt(0.25 * (P - Q) * (P - Q) + R * R));
+  }
+  var amps = pts.map(function (p) { return ampE(p.f); }).sort(function (a, b) { return a - b; });
+  var REF = amps[Math.floor(0.98 * (amps.length - 1))];
+  var hAmps = pts.map(function (p) { return Math.hypot(p.f.hy[0], p.f.hy[1]); }).sort(function (a, b) { return a - b; });
+  var HREF = hAmps[Math.floor(0.85 * (hAmps.length - 1))];
+  var probeF = physics(PROBE.x, PROBE.z);
+
+  function setFont(kind, size) {
+    if (kind === 'i') ctx.font = 'italic ' + (size + 2) + 'px ' + SERIF;
+    else if (kind === 'b') ctx.font = 'bold ' + size + 'px ' + SANS;
+    else ctx.font = size + 'px ' + SANS;
+  }
+  function runs(x0, y0, items, size, col) {
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = col || INK;
+    items.forEach(function (it) { setFont(it[1], size); ctx.fillText(it[0], x0, y0); x0 += ctx.measureText(it[0]).width; });
+    return x0;
+  }
+  function arrow(cx, cy, dx, dy, len, col, lw) {
+    if (len < 1.2) { ctx.beginPath(); ctx.arc(cx, cy, 1, 0, 2 * Math.PI); ctx.fillStyle = PALE; ctx.fill(); return; }
+    var n = Math.hypot(dx, dy), ux = dx / n, uy = dy / n, x0 = cx - 0.5 * len * ux, y0 = cy - 0.5 * len * uy, x1 = cx + 0.5 * len * ux, y1 = cy + 0.5 * len * uy;
+    var hd = Math.min(lw * 4, 0.45 * len);
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1 - 0.6 * hd * ux, y1 - 0.6 * hd * uy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - hd * ux - 0.5 * hd * uy, y1 - hd * uy + 0.5 * hd * ux); ctx.lineTo(x1 - hd * ux + 0.5 * hd * uy, y1 - hd * uy - 0.5 * hd * ux); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+  }
+  function hmark(cx, cy, v, ref) {
+    var r = 1.5 + 4.5 * Math.min(1, Math.pow(Math.abs(v) / ref, 0.4));
+    ctx.strokeStyle = ORANGE; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
+    if (r < 2.6) return;
+    if (v > 0) { ctx.beginPath(); ctx.arc(cx, cy, 0.35 * r, 0, 2 * Math.PI); ctx.fillStyle = ORANGE; ctx.fill(); }
+    else { var q = 0.6 * r; ctx.beginPath(); ctx.moveTo(cx - q, cy - q); ctx.lineTo(cx + q, cy + q); ctx.moveTo(cx - q, cy + q); ctx.lineTo(cx + q, cy - q); ctx.stroke(); }
+  }
+
+  var deg = 0, playing = true, showH = false, last = null;
+  function draw() {
+    var d = snap(deg), k, p, ex, ez, m;
+    ctx.setTransform(SC, 0, 0, SC, 0, 0);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = '#9a9a9a'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(PX0, PY0, S * 1, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(sx(0.05) - 4, sy(1.0) - 26, 58, 22);
+    runs(sx(0.05), sy(1.0) - 15, [['r', 'i'], [' = ', 'n'], ['λ', 'i']], 15, DIM);
+
+    for (k = 0; k < pts.length; k++) {
+      p = pts[k]; ex = inst(p.f.ex, d); ez = inst(p.f.ez, d); m = Math.hypot(ex, ez);
+      if (showH) hmark(sx(p.x), sy(p.z), inst(p.f.hy, d), HREF);
+      arrow(sx(p.x), sy(p.z), ex, -ez, 24 * Math.min(1, Math.pow(m / REF, 0.5)), BLUE, 1.5);
+    }
+
+    var I = Math.cos(d * Math.PI / 180);
+    ctx.fillStyle = INK; ctx.fillRect(PX0 - 3, PY0 - 16, 6, 32);
+    if (Math.abs(I) > 0.05) arrow(PX0 + 16, PY0, 0, -I, 26 * Math.abs(I), INK, 2);
+
+    var pex = inst(probeF.ex, d), pez = inst(probeF.ez, d), pm = Math.hypot(pex, pez);
+    ctx.beginPath(); ctx.arc(sx(PROBE.x), sy(PROBE.z), 13, 0, 2 * Math.PI); ctx.strokeStyle = ORANGE; ctx.lineWidth = 2.5; ctx.stroke();
+    arrow(sx(PROBE.x), sy(PROBE.z), pex, -pez, 46 * Math.min(1, pm / Math.hypot(probeF.ez[0], probeF.ez[1])), ORANGE, 4);
+
+    var RX = 812;
+    runs(RX, 36, [['ω', 'i'], ['t', 'i'], [' = ' + d + '°', 'n']], 20);
+    runs(RX, 76, [['안테나 전류', 'n']], 15, DIM);
+    runs(RX, 98, [['(검은 화살표)', 'n']], 15, DIM);
+    runs(RX, 150, [['주황 점의', 'b']], 16, OTXT);
+    runs(RX, 172, [['전기장', 'b']], 16, OTXT);
+    var zv = pez / Math.hypot(probeF.ez[0], probeF.ez[1]);
+    if (Math.abs(zv) < 0.005) zv = 0;
+    runs(RX, 200, [['세로 성분 ÷ 최댓값', 'n']], 14, DIM);
+    runs(RX, 222, [['= ' + (zv < 0 ? '−' : '') + Math.abs(zv).toFixed(2), 'n']], 17);
+    var ratio = Math.hypot(probeF.ez[0], probeF.ez[1]) / Math.hypot(probeF.hy[0], probeF.hy[1]) * 376.73;
+    runs(RX, 270, [['주황 점의 ', 'n'], ['E', 'i'], ['/', 'n'], ['H', 'i']], 15, DIM);
+    runs(RX, 292, [['= ' + ratio.toFixed(0) + ' Ω', 'n']], 17);
+    if (showH) {
+      hmark(RX + 8, 352, 1, 1); runs(RX + 22, 352, [['자기장: 화면에서 나옴', 'n']], 13, DIM);
+      hmark(RX + 8, 376, -1, 1); runs(RX + 22, 376, [['자기장: 화면으로 들어감', 'n']], 13, DIM);
+    }
+  }
+
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:4px;font-size:16px;line-height:1.3;color:' + INK + ';font-family:' + SANS;
+  var BTN = 'font:inherit;padding:5px 16px;border:1.5px solid ' + INK + ';background:#fff;color:' + INK + ';border-radius:4px;cursor:pointer';
+  function mk(tag, css, txt) { var e = document.createElement(tag); e.style.cssText = css || ''; if (txt) e.textContent = txt; bar.appendChild(e); return e; }
+  var pb = mk('button', BTN + ';min-width:84px', '멈춤'); pb.type = 'button';
+  var hb = mk('button', BTN, '자기장도 보기'); hb.type = 'button';
+  pb.addEventListener('click', function () { playing = !playing; last = null; pb.textContent = playing ? '멈춤' : '재생'; pb.blur(); draw(); });
+  hb.addEventListener('click', function () { showH = !showH; hb.textContent = showH ? '자기장 감추기' : '자기장도 보기'; hb.blur(); draw(); });
+
+  var SPEED = 90;
+  var q = new URLSearchParams(location.search);
+  var printView = q.get('view') === 'print' || q.has('print-pdf');
+  if (printView) { playing = false; deg = 276; pb.textContent = '재생'; }
+  function visible() { var R_ = window.Reveal; if (R_ && R_.getCurrentSlide) { var c = R_.getCurrentSlide(); return !!(c && c.contains(cv)); } return true; }
+  function tick(now) {
+    if (playing && visible()) {
+      if (last !== null) deg = step(deg, (now - last) / 1000, SPEED);
+      last = now; draw();
+    } else last = null;
+    requestAnimationFrame(tick);
+  }
+  cv.__state = function () { return { deg: deg, shown: snap(deg), playing: playing, showH: showH, ref: REF }; };
+  draw();
+  requestAnimationFrame(tick);
+})();
+</script>
+</main>
+<footer>© 2026 박상욱 · MAE Lab., 순천향대학교 전자공학과<br>All rights reserved · 무단 복제·배포를 금합니다</footer>
+</body>
+</html>
